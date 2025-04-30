@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: gcr.io/YOUR_PROJECT_ID/frontend:latest
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:latest
           ports:
             - containerPort: 3000
