@@ -1,0 +1,22 @@
+steps:
+  # Build backend
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
+    args: [ 'build', '-t', 'gcr.io/empyrean-harbor-456906-s2/backend:latest', '.' ]
+
+  # Push backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'gcr.io/empyrean-harbor-456906-s2/backend:latest' ]
+
+  # Build frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'frontend'
+    args: [ 'build', '-t', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest', '.' ]
+
+  # Push frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest' ]
+
+images:
+  - 'gcr.io/empyrean-harbor-456906-s2/backend:latest'
+  - 'gcr.io/empyrean-harbor-456906-s2/frontend:latest'
