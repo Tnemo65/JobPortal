@@ -18,7 +18,7 @@ RUN if [ -f yarn.lock ]; then \
     fi
 
 COPY . .
-
+RUN chmod +x ./node_modules/.bin/vite
 # Build production
 RUN if [ -f yarn.lock ]; then \
         yarn build; \
@@ -34,7 +34,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Tạo file cấu hình Nginx cho SPA routing
 RUN echo 'server { \
-    listen 80; \
+    listen 8080; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
@@ -43,6 +43,6 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

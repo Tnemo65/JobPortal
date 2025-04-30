@@ -1,22 +1,85 @@
 steps:
-  # Build backend
+  # Install backend dependencies
+  - name: 'node:18'
+    dir: 'backend'
+    entrypoint: 'npm'
+    args: ['install']
+    id: 'backend-install'
+    
+  # Build backend docker image
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'backend'
-    args: [ 'build', '-t', 'gcr.io/empyrean-harbor-456906-s2/backend:latest', '.' ]
+    args: ['build', '-t', 'gcr.io/empyrean-harbor-456906-s2/backend:latest', '.']
+    id: 'backend-build'
+    waitFor: ['backend-install']  # Đã thay đổi từ 'backend-test' thành 'backend-install'
 
-  # Push backend
+  # Push backend to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: [ 'push', 'gcr.io/empyrean-harbor-456906-s2/backend:latest' ]
+    args: ['push', 'gcr.io/empyrean-harbor-456906-s2/backend:latest']
+    id: 'backend-push'
+    waitFor: ['backend-build']
 
-  # Build frontend
+  # Install frontend dependencies
+  - name: 'node:18'
+    dir: 'frontend'
+    entrypoint: 'npm'
+    args: ['install']
+    id: 'frontend-install'
+
+  # Fix permissions
+  - name: 'node:18'
+    dir: 'frontend'
+    entrypoint: 'chmod'
+    args: ['-R', '755', './node_modules/.bin/']
+    id: 'fix-permissions'
+    waitFor: ['frontend-install']
+
+  # Build frontend (production build)
+  - name: 'node:18'
+    dir: 'frontend'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+    id: 'frontend-build'
+    waitFor: ['frontend-install']
+    
+  # Build frontend docker image
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'frontend'
-    args: [ 'build', '-t', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest', '.' ]
+    args: ['build', '-t', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest', '.']
+    id: 'frontend-docker-build'
+    waitFor: ['frontend-build']
 
-  # Push frontend
+  # Push frontend to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: [ 'push', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest' ]
+    args: ['push', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest']
+    id: 'frontend-push'
+    waitFor: ['frontend-docker-build']
+
+  # Deploy to Cloud Run (optional)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+    - 'run'
+    - 'deploy'
+    - 'backend-service'
+    - '--image=gcr.io/empyrean-harbor-456906-s2/backend:latest'
+    - '--region=us-central1'
+    - '--platform=managed'
+    waitFor: ['backend-push']
+    
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+    - 'run'
+    - 'deploy'
+    - 'frontend-service'
+    - '--image=gcr.io/empyrean-harbor-456906-s2/frontend:latest'
+    - '--region=us-central1'
+    - '--platform=managed'
+    waitFor: ['frontend-push']
 
 images:
   - 'gcr.io/empyrean-harbor-456906-s2/backend:latest'
   - 'gcr.io/empyrean-harbor-456906-s2/frontend:latest'
+
+timeout: 1800s
