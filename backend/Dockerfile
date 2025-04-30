@@ -32,7 +32,6 @@ EXPOSE 8080
 
 # Biến môi trường (nạp từ docker-compose)
 ENV NODE_ENV=production
-ENV PORT=8080
 
 # Lệnh khởi động app
 CMD ["node", "index.js"]
