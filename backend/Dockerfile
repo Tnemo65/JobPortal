@@ -28,6 +28,7 @@ RUN chown -R nodejs:nodejs /usr/src/app
 USER nodejs
 
 # Expose port 8000
+#hihi
 EXPOSE 8000
 
 # Biến môi trường (nạp từ docker-compose)
