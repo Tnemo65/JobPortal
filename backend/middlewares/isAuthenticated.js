@@ -2,8 +2,18 @@ import jwt from "jsonwebtoken";
 
 const isAuthenticated = async (req, res, next) => {
     try {
-        // Lấy token từ cookie
-        const token = req.cookies.token;
+        let token;
+        
+        // Kiểm tra token trong header Authorization
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
+        
+        // Nếu không có token trong header, thử lấy từ cookie
+        if (!token) {
+            token = req.cookies.token;
+        }
         
         // Kiểm tra token có tồn tại không
         if (!token) {

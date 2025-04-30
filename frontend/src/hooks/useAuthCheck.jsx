@@ -19,17 +19,31 @@ const useAuthCheck = () => {
             // Chỉ kiểm tra khi refresh trang mà không có user trong Redux
             if (!user) {
                 try {
-                    // Gọi API để kiểm tra xác thực từ cookie
-                    const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
-                        withCredentials: true
-                    });
+                    // Lấy token từ localStorage
+                    const token = localStorage.getItem('token');
                     
-                    if (res.data.success) {
-                        // Cập nhật lại thông tin user vào Redux store
-                        dispatch(setUser(res.data.user));
+                    // Chỉ gửi request nếu có token
+                    if (token) {
+                        // Gọi API để kiểm tra xác thực từ token
+                        const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
+                            withCredentials: true,
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
+                        });
+                        
+                        if (res.data.success) {
+                            // Cập nhật lại thông tin user vào Redux store
+                            dispatch(setUser(res.data.user));
+                        }
                     }
                 } catch (error) {
-                    // Không làm gì - người dùng có thể chưa đăng nhập
+                    // Xóa token nếu không hợp lệ
+                    if (error.response?.status === 401) {
+                        localStorage.removeItem('token');
+                    }
                     console.log("Không có phiên đăng nhập hiện tại");
                 }
             }

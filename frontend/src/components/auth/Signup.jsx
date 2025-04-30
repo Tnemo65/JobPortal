@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Navbar from '../shared/Navbar'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
@@ -26,6 +26,29 @@ const Signup = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [fileName, setFileName] = useState("");
+    const loadingTimeoutRef = useRef(null);
+    
+    // Thêm timeout để reset trạng thái loading nếu kéo dài quá lâu
+    useEffect(() => {
+        if (loading) {
+            loadingTimeoutRef.current = setTimeout(() => {
+                console.log("Signup timeout - resetting loading state");
+                dispatch(setLoading(false));
+                toast.error("Đăng ký mất nhiều thời gian. Vui lòng thử lại sau.");
+            }, 15000); // 15 giây timeout
+        } else {
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+                loadingTimeoutRef.current = null;
+            }
+        }
+        
+        return () => {
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+            }
+        };
+    }, [loading, dispatch]);
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
@@ -34,6 +57,22 @@ const Signup = () => {
     const changeFileHandler = (e) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Kiểm tra định dạng file là ảnh
+            const validFormats = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+            if (!validFormats.includes(file.type)) {
+                toast.error('CV phải là định dạng hình ảnh (JPEG, PNG, GIF)');
+                e.target.value = '';
+                return;
+            }
+            
+            // Kiểm tra kích thước file (tối đa 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                toast.error('File quá lớn. Kích thước tối đa cho phép là 5MB');
+                e.target.value = '';
+                return;
+            }
+            
             setFileName(file.name);
             setInput({ ...input, file });
         }
@@ -41,6 +80,18 @@ const Signup = () => {
     
     const submitHandler = async (e) => {
         e.preventDefault();
+        
+        // Kiểm tra dữ liệu trước khi submit
+        if (!input.fullname || !input.email || !input.phoneNumber || !input.password || !input.role) {
+            toast.error("Vui lòng điền đầy đủ thông tin");
+            return;
+        }
+        
+        if (!input.file && input.role === 'student') {
+            toast.error("Vui lòng tải lên CV của bạn");
+            return;
+        }
+        
         const formData = new FormData();
         formData.append("fullname", input.fullname);
         formData.append("email", input.email);
@@ -52,22 +103,35 @@ const Signup = () => {
         }
 
         try {
+            // Reset loading state và đặt lại
+            dispatch(setLoading(false));
             dispatch(setLoading(true));
-            // Sử dụng axios bình thường thay vì createSecureFormAxios
+            
+            // Đặt timeout cho request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 giây
+            
             const res = await axios.post(`${USER_API_END_POINT}/register`, formData, {
                 withCredentials: true,
                 headers: {
                     'Content-Type': 'multipart/form-data'
-                }
+                },
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (res.data.success) {
                 navigate("/login");
                 toast.success(res.data.message);
             }
         } catch (error) {
-            console.log(error);
-            toast.error(error.response?.data?.message || "Đăng ký thất bại");
+            console.error("Registration error:", error);
+            if (error.name === 'AbortError') {
+                toast.error("Đăng ký quá thời gian. Vui lòng thử lại.");
+            } else {
+                toast.error(error.response?.data?.message || "Đăng ký thất bại");
+            }
         } finally {
             dispatch(setLoading(false));
         }
@@ -204,14 +268,14 @@ const Signup = () => {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-1">Profile Photo</Label>
+                                    <Label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-1">CV / Resume (Hình ảnh)</Label>
                                     <div className="relative">
                                         <label htmlFor="file" className="flex items-center gap-2 cursor-pointer w-full p-2 bg-gray-50 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors">
                                             <div className="bg-accent/10 rounded-full p-2">
                                                 <Upload className="h-5 w-5 text-accent" />
                                             </div>
                                             <span className="text-gray-500 text-sm">
-                                                {fileName ? fileName : "Upload profile photo"}
+                                                {fileName ? fileName : "Tải lên CV (định dạng ảnh)"}
                                             </span>
                                         </label>
                                         <Input
@@ -223,6 +287,7 @@ const Signup = () => {
                                             required
                                         />
                                     </div>
+                                    <p className="text-xs text-gray-500 mt-1">Định dạng ảnh: JPEG, PNG, GIF (tối đa 5MB)</p>
                                 </div>
                                 
                                 <div className="pt-2">

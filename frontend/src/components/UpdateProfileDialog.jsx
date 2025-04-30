@@ -168,6 +168,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
     
     const [loading, setLoading] = useState(false);
     const [previewFile, setPreviewFile] = useState(null);
+    const [previewResumeFile, setPreviewResumeFile] = useState(null);
     const [fileName, setFileName] = useState('');
     const [skills, setSkills] = useState(user?.profile?.skills || []);
     const [formData, setFormData] = useState({
@@ -237,10 +238,10 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
     const handleResumeFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Validate file format
-            const validFormats = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            // Validate file format - chỉ chấp nhận định dạng ảnh
+            const validFormats = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
             if (!validFormats.includes(file.type)) {
-                toast.error('Định dạng file không hỗ trợ. Vui lòng tải lên file PDF hoặc DOCX');
+                toast.error('CV phải là định dạng hình ảnh (JPEG, PNG, GIF)');
                 e.target.value = '';
                 return;
             }
@@ -258,6 +259,13 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 file
             });
             setFileName(file.name);
+            
+            // Tạo bản xem trước nếu là hình ảnh
+            const reader = new FileReader();
+            reader.onload = () => {
+                setPreviewResumeFile(reader.result);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -612,7 +620,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                                     <div className="flex items-center justify-between mb-4">
                                         <div>
                                             <h4 className="font-medium">Tải lên CV của bạn</h4>
-                                            <p className="text-sm text-muted-foreground">Định dạng: PDF, DOCX (tối đa 5MB)</p>
+                                            <p className="text-sm text-muted-foreground">Định dạng: JPEG, PNG, GIF (tối đa 5MB)</p>
                                         </div>
                                         <Button 
                                             type="button"
@@ -625,7 +633,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                                             ref={resumeFileRef}
                                             type="file" 
                                             onChange={handleResumeFileChange} 
-                                            accept=".pdf,.doc,.docx"
+                                            accept="image/*"
                                             className="hidden" 
                                         />
                                     </div>
@@ -693,6 +701,20 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                                                         <X className="h-4 w-4 mr-1" /> Xóa CV
                                                     </Button>
                                                 )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Hiển thị xem trước ảnh CV */}
+                                    {(previewResumeFile || getCurrentResumeUrl()) && (
+                                        <div className="mt-4">
+                                            <p className="text-sm font-medium mb-2">Xem trước CV:</p>
+                                            <div className="w-full max-h-[300px] border rounded-md overflow-hidden">
+                                                <img 
+                                                    src={previewResumeFile || getCurrentResumeUrl()} 
+                                                    alt="Resume Preview" 
+                                                    className="w-full object-contain"
+                                                />
                                             </div>
                                         </div>
                                     )}

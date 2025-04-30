@@ -1,18 +1,28 @@
 import rateLimit from "express-rate-limit";
 
+// Kiểm tra môi trường
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 // Giới hạn cơ bản cho tất cả các routes
 export const basicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 phút
-    max: 500, // Tăng từ 200 lên 500 request trong 15 phút
+    max: isDevelopment ? 1000 : 500, // Tăng lên 1000 cho môi trường dev, 500 cho production
     standardHeaders: true, // Trả về thông tin rate limit trong headers
     legacyHeaders: false, // Disable legacy headers
     message: { message: "Quá nhiều yêu cầu, vui lòng thử lại sau.", success: false },
+    // Thêm logging để debug trong môi trường development
+    skip: (req) => {
+        if (isDevelopment && req.headers.origin === 'http://localhost:5173') {
+            return Math.random() > 0.1; // Log khoảng 10% request trong development
+        }
+        return false;
+    }
 });
 
 // Rate limiter nghiêm ngặt hơn cho các routes liên quan đến xác thực
 export const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 giờ
-    max: 30, // Tăng từ 10 lên 30 request đăng nhập trong 1 giờ
+    max: isDevelopment ? 100 : 30, // Tăng lên 100 cho development
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Quá nhiều yêu cầu đăng nhập, vui lòng thử lại sau 1 giờ.", success: false },
@@ -22,8 +32,12 @@ export const authLimiter = rateLimit({
 // Rate limiter dành riêng cho API
 export const apiLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 phút
-    max: 250, // Tăng từ 100 lên 250 request trong 10 phút
+    max: isDevelopment ? 500 : 250, // Tăng lên 500 cho development
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Đã vượt quá giới hạn API, vui lòng thử lại sau.", success: false },
+    skip: (req) => {
+        // Trong môi trường development, bỏ qua rate limit cho frontend localhost
+        return isDevelopment && req.headers.origin === 'http://localhost:5173';
+    }
 });

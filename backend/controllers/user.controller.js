@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 import { apiCache } from "../utils/redis-cache.js";
+import { Notification } from "../models/notification.model.js"; // Import Notification model
 
 export const register = async (req, res) => {
     try {
@@ -50,34 +51,27 @@ export const register = async (req, res) => {
         if (file) {
             try {
                 const fileUri = getDataUri(file);
-                // Kiểm tra định dạng file
-                const validExtensions = ['.pdf', '.doc', '.docx'];
-                const fileExt = file.originalname.substring(file.originalname.lastIndexOf('.')).toLowerCase();
                 
-                if (!validExtensions.includes(fileExt)) {
+                // Kiểm tra định dạng file phải là ảnh
+                if (!file.mimetype.startsWith('image/')) {
                     return res.status(400).json({
-                        message: "Chỉ chấp nhận file PDF, DOC hoặc DOCX",
+                        message: "CV phải là định dạng hình ảnh (JPEG, PNG, GIF)",
                         success: false,
                     });
                 }
                 
-                // Upload file với định dạng đúng và tên có ý nghĩa
-                const isPDF = file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf');
-                if (isPDF) {
-                    const fileName = `resume_register_${Date.now()}${fileExt}`;
-                    cloudResponse = await cloudinary.uploader.upload(fileUri.content, { 
-                        resource_type: "raw",
-                        folder: "job_portal/resumes",
-                        public_id: fileName,
-                        use_filename: true
-                    });
-                } else {
-                    // Upload như bình thường với các định dạng khác
-                    cloudResponse = await cloudinary.uploader.upload(fileUri.content, { 
-                        resource_type: "raw",
-                        folder: "job_portal/resumes"
-                    });
-                }
+                // Upload ảnh CV lên Cloudinary
+                cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+                    folder: "job_portal/resumes",
+                    transformation: [
+                        { quality: "auto:best" },
+                        { format: "jpg" }
+                    ]
+                });
+                
+                // Lưu tên file gốc
+                cloudResponse.originalName = file.originalname;
+                
             } catch (uploadError) {
                 console.error("File upload error:", uploadError);
                 return res.status(400).json({
@@ -89,7 +83,7 @@ export const register = async (req, res) => {
 
         if (!cloudResponse) {
             return res.status(400).json({
-                message: "Resume là bắt buộc",
+                message: "CV là bắt buộc",
                 success: false,
             });
         }
@@ -114,8 +108,11 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile: {
-                resume: cloudResponse.secure_url,
-                resumeOriginalName: file.originalname,
+                resume: {
+                    url: cloudResponse.secure_url,
+                    title: 'Resume',
+                    originalName: file.originalname
+                },
             },
         });
 
@@ -239,6 +236,13 @@ export const logout = async (req, res) => {
 export const ssoAuthSuccess = async (req, res) => {
     try {
         const user = req.user;
+        if (!user) {
+            console.error('No user data in SSO success handler');
+            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('Authentication failed: No user data')}`);
+        }
+        
+        console.log('Google SSO authentication successful for user:', user.email);
+        
         // Create token for the authenticated user
         const tokenData = {
             userId: user._id
@@ -255,33 +259,40 @@ export const ssoAuthSuccess = async (req, res) => {
             profile: user.profile
         };
 
-        // Set the token in a cookie and redirect to the frontend
+        // Set the token in a cookie
         res.cookie("token", token, { 
             maxAge: 24 * 60 * 60 * 1000, // 1 day
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            sameSite: 'lax' // Changed from 'strict' to allow cross-site redirects
         });
         
-        // Redirect to frontend with success flag
-        res.redirect(`http://localhost:5173/sso-callback?success=true`);
+        // Redirect to frontend with token in URL query params
+        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendURL}/sso-callback?success=true&token=${token}`);
     } catch (error) {
-        console.log(error);
-        res.redirect(`http://localhost:5173/sso-callback?success=false&error=${error.message}`);
+        console.error('SSO auth success error:', error);
+        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent(error.message || 'Authentication failed')}`);
     }
 };
 
 // SSO Authentication failure handler
 export const ssoAuthFailure = (req, res) => {
-    res.redirect(`http://localhost:5173/sso-callback?success=false&error=Authentication failed`);
+    console.error('Google SSO authentication failed');
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('Authentication failed')}`);
 };
 
 // Get user profile after SSO login
 export const getSsoProfile = async (req, res) => {
     try {
         const userId = req.id; // From isAuthenticated middleware
+        console.log('Getting SSO profile for user ID:', userId);
+        
         const user = await User.findById(userId);
         if (!user) {
+            console.error('User not found for ID:', userId);
             return res.status(404).json({
                 message: "User not found.",
                 success: false
@@ -298,14 +309,15 @@ export const getSsoProfile = async (req, res) => {
             profile: user.profile
         };
         
+        console.log('SSO profile fetched successfully for:', user.email);
         return res.status(200).json({
             user: userData,
             success: true
         });
     } catch (error) {
-        console.log(error);
+        console.error('Get SSO profile error:', error);
         return res.status(500).json({
-            message: "Something went wrong.",
+            message: "Failed to retrieve user profile.",
             success: false
         });
     }
@@ -336,6 +348,24 @@ export const updateProfile = async (req, res) => {
             hasChanges = true;
         }
 
+        // Always ensure resume is an object before any operations
+        if (!user.profile.resume) {
+            // If resume doesn't exist, initialize it as an empty object
+            user.profile.resume = {
+                url: '',
+                title: '',
+                originalName: ''
+            };
+        } else if (typeof user.profile.resume === 'string') {
+            // If resume is a string (old format), convert it to object
+            user.profile.resume = {
+                url: user.profile.resume,
+                title: user.profile.resumeTitle || 'Resume',
+                originalName: user.profile.resumeOriginalName || ''
+            };
+            hasChanges = true;
+        }
+
         // Kiểm tra xem có files được upload không
         if (req.files) {
             // Xử lý file resume nếu có
@@ -343,9 +373,16 @@ export const updateProfile = async (req, res) => {
                 hasChanges = true; // File uploads always count as changes
                 try {
                     const resumeFile = req.files.resume[0];
+                    
+                    // Kiểm tra định dạng file là ảnh
+                    if (!resumeFile.mimetype.startsWith('image/')) {
+                        return res.status(400).json({
+                            message: "File CV phải là định dạng hình ảnh (JPEG, PNG, GIF)",
+                            success: false
+                        });
+                    }
+                    
                     const fileUri = getDataUri(resumeFile);
-                    // Nếu là PDF thì upload với resource_type: 'raw', nếu là ảnh thì để mặc định
-                    const isPDF = resumeFile.mimetype === 'application/pdf' || resumeFile.originalname.endsWith('.pdf');
                     
                     // Xóa file CV cũ trên Cloudinary nếu có
                     if (user.profile && user.profile.resume) {
@@ -361,7 +398,6 @@ export const updateProfile = async (req, res) => {
                             if (oldResumeUrl) {
                                 // Lấy chỉ phần public_id từ URL 
                                 const urlParts = oldResumeUrl.split('/');
-                                // Format của cloudinary url: https://res.cloudinary.com/{cloud_name}/{resource_type}/{type}/{public_id}
                                 if (urlParts.length >= 2) {
                                     // Lấy tên file (bao gồm cả folder nếu có)
                                     const publicIdWithExt = urlParts.slice(urlParts.indexOf('job_portal')).join('/');
@@ -370,7 +406,7 @@ export const updateProfile = async (req, res) => {
                                     
                                     console.log(`Xóa CV cũ: ${publicId}`);
                                     // Xóa file cũ trên Cloudinary
-                                    await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+                                    await cloudinary.uploader.destroy(publicId);
                                 }
                             }
                         } catch (deleteError) {
@@ -379,26 +415,18 @@ export const updateProfile = async (req, res) => {
                         }
                     }
                     
-                    if (isPDF) {
-                        // Lấy phần mở rộng từ tên file gốc
-                        const fileExt = resumeFile.originalname.substring(resumeFile.originalname.lastIndexOf('.'));
-                        // Tạo tên file có ý nghĩa bao gồm cả phần mở rộng
-                        const fileName = `resume_${userId}_${Date.now()}${fileExt}`;
-                        
-                        resumeCloudResponse = await cloudinary.uploader.upload(fileUri.content, { 
-                            resource_type: "raw",
-                            folder: "job_portal/resumes",
-                            public_id: fileName, // Đặt public_id có phần mở rộng
-                            use_filename: true, // Sử dụng tên file trong URL
-                        });
-                        
-                        // Lưu tên file gốc để hiển thị
-                        resumeCloudResponse.originalName = resumeFile.originalname;
-                    } else {
-                        resumeCloudResponse = await cloudinary.uploader.upload(fileUri.content, {
-                            folder: "job_portal/resumes"
-                        });
-                    }
+                    // Upload ảnh CV mới lên Cloudinary
+                    resumeCloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+                        folder: "job_portal/resumes",
+                        transformation: [
+                            { quality: "auto:best" },
+                            { format: "jpg" }
+                        ]
+                    });
+                    
+                    // Lưu tên file gốc để hiển thị
+                    resumeCloudResponse.originalName = resumeFile.originalname;
+                    
                 } catch (uploadError) {
                     console.error("Resume upload error:", uploadError);
                     return res.status(400).json({
@@ -413,9 +441,41 @@ export const updateProfile = async (req, res) => {
                 hasChanges = true; // File uploads always count as changes
                 try {
                     const photoFile = req.files.profilePhoto[0];
+                    
+                    // Kiểm tra định dạng file là ảnh
+                    if (!photoFile.mimetype.startsWith('image/')) {
+                        return res.status(400).json({
+                            message: "File ảnh đại diện phải là định dạng hình ảnh (JPEG, PNG, GIF)",
+                            success: false
+                        });
+                    }
+                    
                     const fileUri = getDataUri(photoFile);
+                    
+                    // Xóa ảnh đại diện cũ nếu có
+                    if (user.profile && user.profile.profilePhoto) {
+                        try {
+                            const oldPhotoUrl = user.profile.profilePhoto;
+                            const urlParts = oldPhotoUrl.split('/');
+                            if (urlParts.length >= 2) {
+                                const publicIdWithExt = urlParts.slice(urlParts.indexOf('job_portal')).join('/');
+                                const publicId = publicIdWithExt.split('.')[0];
+                                
+                                await cloudinary.uploader.destroy(publicId);
+                            }
+                        } catch (deleteError) {
+                            console.error("Không thể xóa ảnh đại diện cũ:", deleteError);
+                        }
+                    }
+                    
+                    // Upload ảnh mới
                     profilePhotoCloudResponse = await cloudinary.uploader.upload(fileUri.content, {
-                        folder: "job_portal/profile_photos"
+                        folder: "job_portal/profile_photos",
+                        transformation: [
+                            { width: 400, height: 400, crop: "fill" },
+                            { quality: "auto:best" },
+                            { format: "jpg" }
+                        ]
                     });
                 } catch (uploadError) {
                     console.error("Profile photo upload error:", uploadError);
@@ -431,16 +491,39 @@ export const updateProfile = async (req, res) => {
                 hasChanges = true; // File uploads always count as changes
                 try {
                     const file = req.files.file[0];
-                    const fileUri = getDataUri(file);
-                    const isPDF = file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf');
-                    if (isPDF) {
-                        resumeCloudResponse = await cloudinary.uploader.upload(fileUri.content, { 
-                            resource_type: "raw",
-                            folder: "job_portal/resumes"
+                    
+                    // Kiểm tra định dạng file là ảnh
+                    if (!file.mimetype.startsWith('image/')) {
+                        return res.status(400).json({
+                            message: "File phải là định dạng hình ảnh (JPEG, PNG, GIF)",
+                            success: false
                         });
+                    }
+                    
+                    const fileUri = getDataUri(file);
+                    
+                    // Xác định loại file dựa theo tên field
+                    const fileCategory = file.fieldname;
+                    
+                    if (fileCategory === 'resume') {
+                        // Upload file như CV
+                        resumeCloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+                            folder: "job_portal/resumes",
+                            transformation: [
+                                { quality: "auto:best" },
+                                { format: "jpg" }
+                            ]
+                        });
+                        resumeCloudResponse.originalName = file.originalname;
                     } else {
+                        // Upload file như ảnh đại diện
                         profilePhotoCloudResponse = await cloudinary.uploader.upload(fileUri.content, {
-                            folder: "job_portal/profile_photos"
+                            folder: "job_portal/profile_photos",
+                            transformation: [
+                                { width: 400, height: 400, crop: "fill" },
+                                { quality: "auto:best" },
+                                { format: "jpg" }
+                            ]
                         });
                     }
                 } catch (uploadError) {
@@ -450,15 +533,25 @@ export const updateProfile = async (req, res) => {
         }
 
         let skillsArray = [];
-        if(req.body.skills){
+        if (req.body.skills) {
             try {
                 // Parse JSON string to array if it's a JSON string
-                if (typeof req.body.skills === 'string' && req.body.skills.startsWith('[')) {
-                    skillsArray = JSON.parse(req.body.skills);
-                } 
-                // Otherwise handle as comma-separated string (backward compatibility)
-                else {
-                    skillsArray = req.body.skills.split(",").map(skill => skill.trim());
+                if (typeof req.body.skills === 'string') {
+                    try {
+                        if (req.body.skills.startsWith('[')) {
+                            skillsArray = JSON.parse(req.body.skills);
+                        } else {
+                            // Handle as comma-separated string (backward compatibility)
+                            skillsArray = req.body.skills.split(",").map(skill => skill.trim());
+                        }
+                    } catch (jsonError) {
+                        console.error("JSON parse error for skills:", jsonError);
+                        // Fallback to comma-separated handling if JSON parsing fails
+                        skillsArray = req.body.skills.split(",").map(skill => skill.trim());
+                    }
+                } else if (Array.isArray(req.body.skills)) {
+                    // If it's already an array, use it directly
+                    skillsArray = req.body.skills;
                 }
                 
                 // Validate each skill (2-20 chars, valid characters)
@@ -478,7 +571,7 @@ export const updateProfile = async (req, res) => {
                     hasChanges = true;
                 }
             } catch (err) {
-                console.error("Error parsing skills:", err);
+                console.error("Error processing skills:", err);
                 // If error parsing, default to empty array
                 skillsArray = [];
             }
@@ -552,42 +645,24 @@ export const updateProfile = async (req, res) => {
         } 
         // 2. Nếu không có file mới nhưng có resumeTitle mới
         else if (resumeTitle) {
-            const currentTitle = typeof user.profile.resume === 'object' ? 
-                (user.profile.resume?.title || '') : '';
-            
-            if (resumeTitle !== currentTitle) {
+            // Nếu chưa có resume thì khởi tạo object rỗng
+            if (!user.profile.resume || typeof user.profile.resume !== 'object') {
+                user.profile.resume = {
+                    url: '',
+                    title: resumeTitle,
+                    originalName: ''
+                };
                 hasChanges = true;
-                
-                // Nếu profile.resume là chuỗi, chuyển đổi thành đối tượng
-                if (typeof user.profile.resume === 'string') {
-                    const currentUrl = user.profile.resume;
-                    user.profile.resume = {
-                        url: currentUrl,
-                        title: resumeTitle
-                    };
-                } 
-                // Nếu profile.resume là đối tượng, chỉ cập nhật title
-                else if (user.profile.resume && typeof user.profile.resume === 'object') {
+            } else {
+                const currentTitle = user.profile.resume.title || '';
+                if (resumeTitle !== currentTitle) {
                     user.profile.resume.title = resumeTitle;
-                }
-                // Nếu chưa có resume nhưng có title, tạo đối tượng trống
-                else {
-                    user.profile.resume = {
-                        title: resumeTitle
-                    };
+                    hasChanges = true;
                 }
             }
         }
-        // 3. Nếu resume hiện tại là chuỗi nhưng không có dữ liệu mới
-        else if (user.profile.resume && typeof user.profile.resume === 'string') {
-            // Chuyển đổi thành đối tượng
-            const currentUrl = user.profile.resume;
-            user.profile.resume = {
-                url: currentUrl,
-                title: 'Resume'
-            };
-            hasChanges = true;
-        }
+        
+
         
         // Cập nhật ảnh profile nếu có
         if(profilePhotoCloudResponse) {
@@ -768,21 +843,30 @@ export const deleteResume = async (req, res) => {
             });
         }
 
-        // Kiểm tra xem có resume không
-        if (!user.profile || !user.profile.resume) {
+        // Đảm bảo profile tồn tại
+        if (!user.profile) {
+            user.profile = {};
+        }
+
+        // Đảm bảo resume tồn tại
+        if (!user.profile.resume) {
             return res.status(400).json({
                 message: "Không có CV để xóa",
                 success: false
             });
         }
 
-        // Lấy URL resume (xử lý cả 2 trường hợp: string hoặc object.url)
-        let resumeUrl = '';
+        // Chuyển đổi resume từ string sang object nếu cần
         if (typeof user.profile.resume === 'string') {
-            resumeUrl = user.profile.resume;
-        } else if (user.profile.resume.url) {
-            resumeUrl = user.profile.resume.url;
+            user.profile.resume = {
+                url: user.profile.resume,
+                title: user.profile.resumeTitle || 'Resume',
+                originalName: user.profile.resumeOriginalName || ''
+            };
         }
+
+        // Lấy URL resume - bây giờ đã chắc chắn là object
+        const resumeUrl = user.profile.resume.url;
 
         // Xóa file trên Cloudinary
         if (resumeUrl) {
@@ -796,8 +880,8 @@ export const deleteResume = async (req, res) => {
                     // Loại bỏ phần mở rộng file nếu có
                     const publicId = publicIdWithExt.split('.')[0];
                     
-                    // Xóa file trên Cloudinary
-                    await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+                    // Xóa file trên Cloudinary - sử dụng resource_type là 'image' thay vì 'raw'
+                    await cloudinary.uploader.destroy(publicId);
                     console.log(`Đã xóa CV với public_id: ${publicId}`);
                 }
             } catch (deleteError) {
@@ -807,7 +891,11 @@ export const deleteResume = async (req, res) => {
         }
 
         // Xóa thông tin resume khỏi profile
-        user.profile.resume = undefined;
+        user.profile.resume = {
+            url: '',
+            title: '',
+            originalName: ''
+        };
         user.profile.resumeOriginalName = undefined; // Xóa cả tên file gốc nếu có
 
         await user.save();
@@ -831,6 +919,91 @@ export const deleteResume = async (req, res) => {
         console.error("Delete resume error:", error);
         return res.status(500).json({
             message: "Không thể xóa CV. Vui lòng thử lại sau.",
+            success: false
+        });
+    }
+};
+
+// Get user notifications
+export const getNotifications = async (req, res) => {
+    try {
+        const userId = req.id;
+        
+        const notifications = await Notification.find({ user: userId })
+            .sort({ createdAt: -1 })
+            .limit(20);
+            
+        return res.status(200).json({
+            notifications,
+            success: true
+        });
+    } catch (error) {
+        console.error("Get notifications error:", error);
+        return res.status(500).json({
+            message: "Không thể lấy thông báo. Vui lòng thử lại sau.",
+            success: false
+        });
+    }
+};
+
+// Mark a notification as read
+export const markNotificationRead = async (req, res) => {
+    try {
+        const userId = req.id;
+        const notificationId = req.params.id;
+        
+        const notification = await Notification.findById(notificationId);
+        
+        if (!notification) {
+            return res.status(404).json({
+                message: "Không tìm thấy thông báo",
+                success: false
+            });
+        }
+        
+        // Verify ownership
+        if (notification.user.toString() !== userId) {
+            return res.status(403).json({
+                message: "Bạn không có quyền truy cập thông báo này",
+                success: false
+            });
+        }
+        
+        notification.read = true;
+        await notification.save();
+        
+        return res.status(200).json({
+            message: "Đã đánh dấu thông báo là đã đọc",
+            success: true
+        });
+    } catch (error) {
+        console.error("Mark notification read error:", error);
+        return res.status(500).json({
+            message: "Không thể cập nhật thông báo. Vui lòng thử lại sau.",
+            success: false
+        });
+    }
+};
+
+// Mark all notifications as read
+export const markAllNotificationsRead = async (req, res) => {
+    try {
+        const userId = req.id;
+        
+        // Update all unread notifications for this user
+        await Notification.updateMany(
+            { user: userId, read: false },
+            { read: true }
+        );
+        
+        return res.status(200).json({
+            message: "Đã đánh dấu tất cả thông báo là đã đọc",
+            success: true
+        });
+    } catch (error) {
+        console.error("Mark all notifications read error:", error);
+        return res.status(500).json({
+            message: "Không thể cập nhật thông báo. Vui lòng thử lại sau.",
             success: false
         });
     }

@@ -1,5 +1,5 @@
 import express from "express";
-import { getSavedJobs, getSsoProfile, login, logout, register, saveJob, ssoAuthFailure, ssoAuthSuccess, unsaveJob, updateProfile, deleteResume } from "../controllers/user.controller.js";
+import { getSavedJobs, getSsoProfile, login, logout, register, saveJob, ssoAuthFailure, ssoAuthSuccess, unsaveJob, updateProfile, deleteResume, getNotifications, markNotificationRead, markAllNotificationsRead } from "../controllers/user.controller.js";
 import isAuthenticated from "../middlewares/isAuthenticated.js";
 import { singleUpload, multiFieldUpload } from "../middlewares/mutler.js";
 import { Notification } from '../models/notification.model.js';
@@ -7,6 +7,7 @@ import passport from '../utils/passport.js';
 import { authLimiter, apiLimiter } from "../middlewares/rate-limiter.js";
 import strongPasswordCheck from "../middlewares/strong-password.js";
 import { apiCache } from "../utils/redis-cache.js";
+import he from 'he'; // Import thư viện he để decode HTML entities
 
 const router = express.Router();
 
@@ -15,46 +16,110 @@ router.route("/register").post(authLimiter, singleUpload, strongPasswordCheck, r
 router.route("/login").post(authLimiter, login);
 router.route("/logout").get(logout);
 router.route("/profile/update").post(isAuthenticated, multiFieldUpload, updateProfile);
-router.route("/profile/delete-resume").post(isAuthenticated, deleteResume);
-router.route("/jobs/save/:jobId").post(isAuthenticated, saveJob);
-router.route("/jobs/unsave/:jobId").post(isAuthenticated, unsaveJob);
-router.route("/jobs/saved").get(isAuthenticated, apiCache.middleware('3 minutes'), getSavedJobs);
 
-// SSO routes
-router.route('/auth/google')
-    .get(authLimiter, passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Middleware debug đặc biệt cho OAuth routes
+const oauthDebugMiddleware = (req, res, next) => {
+    // Ghi log toàn bộ thông tin request để debug
+    console.log('OAuth Debug - Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('OAuth Debug - Request cookies:', req.cookies);
+    console.log('OAuth Debug - Request query:', req.query);
+    console.log('OAuth Debug - Request path:', req.path);
+    
+    // Đặt thêm thông tin vào req để sử dụng sau này
+    req.oauthDebug = {
+        timestamp: new Date().toISOString(),
+        hasCode: Boolean(req.query.code)
+    };
+    
+    next();
+};
 
-router.route('/auth/google/callback')
-    .get(
+// Route đăng nhập Google OAuth - không sử dụng session để tránh vấn đề với cookie
+router.route("/auth/google").get(
+    oauthDebugMiddleware,
+    (req, res, next) => {
+        console.log("Starting Google auth flow");
+        // Thêm state để kiểm tra CSRF
+        const state = Math.random().toString(36).substring(2, 15);
+        req.session.oauthState = state;
+        next();
+    },
+    passport.authenticate('google', { 
+        scope: ['profile', 'email'],
+        prompt: 'select_account',
+        session: false // Không sử dụng session-based authentication
+    })
+);
+
+// Route callback từ Google OAuth
+router.route("/auth/google/callback").get(
+    oauthDebugMiddleware,
+    (req, res, next) => {
+        console.log("Received Google auth callback with query params:", req.query);
+        
+        // Kiểm tra xem có code trong query params không
+        if (!req.query.code) {
+            console.error('No auth code received from Google');
+            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('No authentication code received from Google')}`);
+        }
+        
+        // Decode HTML entities trong auth code
+        if (req.query.code && typeof req.query.code === 'string') {
+            const originalCode = req.query.code;
+            req.query.code = he.decode(req.query.code);
+            console.log('Decoded auth code:', originalCode.length, '->', req.query.code.length);
+            
+            // Kiểm tra nếu code chứa HTML entities hoặc ký tự đặc biệt
+            if (originalCode.includes('&#x')) {
+                console.log('Original code contains HTML entities, decoded now');
+            }
+            
+            // Hiển thị 10 ký tự đầu tiên để kiểm tra (không hiển thị toàn bộ vì lý do bảo mật)
+            console.log('First few chars of code:', originalCode.substring(0, 10) + '... -> ' + req.query.code.substring(0, 10) + '...');
+        }
+        
+        // Chuyển tiếp xử lý cho Passport
         passport.authenticate('google', { 
-            failureRedirect: '/auth/failure',
-            session: false
-        }),
-        ssoAuthSuccess
-    );
+            session: false,
+            failureRedirect: '/api/v1/user/auth/failure'
+        }, (err, user, info) => {
+            if (err) {
+                console.error('Google auth callback error:', err);
+                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent(err.message || 'Authentication failed')}`);
+            }
+            
+            if (!user) {
+                console.error('No user returned from Google auth');
+                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('User authentication failed')}`);
+            }
+            
+            console.log('Google auth successful for user:', user.email);
+            req.user = user;
+            next();
+        })(req, res, next);
+    },
+    ssoAuthSuccess
+);
 
-router.route('/auth/failure').get(ssoAuthFailure);
+router.route("/auth/failure").get(ssoAuthFailure);
+router.route("/sso/profile").get(isAuthenticated, getSsoProfile);
 
-router.route('/sso/profile').get(isAuthenticated, getSsoProfile);
+// Notification routes
+router.route("/notifications").get(isAuthenticated, getNotifications);
+router.route("/notifications/:id/read").post(isAuthenticated, markNotificationRead);
+router.route("/notifications/read-all").post(isAuthenticated, markAllNotificationsRead);
 
-// Notifications routes - áp dụng rate limiter và cache cho API
-router.route('/notifications').get(isAuthenticated, apiLimiter, apiCache.middleware('1 minute'), async (req, res) => {
-    try {
-        const notifications = await Notification.find({ user: req.id }).sort({ createdAt: -1 });
-        res.status(200).json({ notifications, success: true });
-    } catch (error) {
-        res.status(500).json({ message: 'Lỗi lấy thông báo', success: false });
-    }
-});
-
-router.route('/notifications/read-all').post(isAuthenticated, apiLimiter, async (req, res) => {
-    try {
-        await Notification.updateMany({ user: req.id, read: false }, { read: true });
-        res.status(200).json({ success: true });
-    } catch (error) {
-        res.status(500).json({ message: 'Lỗi cập nhật thông báo', success: false });
-    }
-});
+// Other routes - updated to support both GET and POST methods for job saving functionality
+router.route("/jobs/save/:jobId")
+    .get(isAuthenticated, saveJob)
+    .post(isAuthenticated, saveJob);
+    
+router.route("/jobs/unsave/:jobId")
+    .get(isAuthenticated, unsaveJob)
+    .post(isAuthenticated, unsaveJob);
+    
+router.route("/jobs/saved").get(isAuthenticated, getSavedJobs);
+router.route("/profile/resume").delete(isAuthenticated, deleteResume);
 
 export default router;
 

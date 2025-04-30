@@ -5,34 +5,63 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configure Google OAuth strategy
+// Xác định callback URL đầy đủ để khớp với authorized redirect URIs trong Google Cloud Console
+const baseURL = process.env.BASE_URL || 'http://localhost:8000';
+const callbackURL = `${baseURL}/api/v1/user/auth/google/callback`;
+
+console.log('Using Google OAuth callback URL:', callbackURL);
+
+// Kiểm tra các biến môi trường cần thiết
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.error('GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET chưa được cấu hình trong .env');
+    console.error('OAuth sẽ không hoạt động đúng nếu thiếu các biến này');
+}
+
+// Cấu hình Google OAuth strategy với xử lý lỗi và logs
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: 'http://localhost:8000/api/v1/user/auth/google/callback',
-    scope: ['profile', 'email']
-}, async (accessToken, refreshToken, profile, done) => {
+    callbackURL: callbackURL,
+    scope: ['profile', 'email'],
+    prompt: 'select_account', // Luôn hiển thị màn hình chọn tài khoản
+    proxy: true, // Hỗ trợ cho cấu hình proxy nếu cần
+    // Tắt việc tự động chuyển đổi chuỗi tham số trong URL
+    passReqToCallback: true, // Sẽ truyền req object vào callback
+    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+}, async (req, accessToken, refreshToken, profile, done) => {
     try {
-        // Check if user already exists
+        console.log('Google OAuth profile received:', profile.displayName, profile.emails?.[0]?.value);
+        
+        // Kiểm tra dữ liệu profile hợp lệ
+        if (!profile || !profile.emails || !profile.emails[0] || !profile.emails[0].value) {
+            console.error('Profile data invalid:', profile);
+            return done(new Error('Invalid profile data from Google'));
+        }
+
+        // Tìm user theo email
         let user = await User.findOne({ email: profile.emails[0].value });
         
-        // If user doesn't exist, create a new one
+        // Nếu user không tồn tại, tạo mới
         if (!user) {
+            console.log('Creating new user from Google profile:', profile.displayName);
             user = await User.create({
-                fullname: profile.displayName,
+                fullname: profile.displayName || 'Google User',
                 email: profile.emails[0].value,
-                phoneNumber: '0000000000', // Default phone number
-                password: Math.random().toString(36).slice(-8), // Random password
-                role: 'student', // Default role
+                phoneNumber: '0000000000', // Số điện thoại mặc định
+                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Mật khẩu ngẫu nhiên
+                role: 'student', // Vai trò mặc định
                 profile: {
                     profilePhoto: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : '',
                     skills: []
                 }
             });
+        } else {
+            console.log('User already exists:', user.email);
         }
         
         return done(null, user);
     } catch (error) {
+        console.error('Error in Google auth strategy:', error);
         return done(error);
     }
 }));

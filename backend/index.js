@@ -28,46 +28,29 @@ let cache = apicache.middleware;
 
 // Security middleware
 // Helmet giúp bảo mật ứng dụng bằng cách thiết lập các HTTP headers
-app.use(helmet());
-
-// Thiết lập các security headers tùy chỉnh
-app.use((req, res, next) => {
-    // Ngăn chặn clickjacking attacks
-    res.setHeader('X-Frame-Options', 'DENY');
-    
-    // Ngăn chặn MIME-sniffing
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    
-    // Bật XSS Protection trên trình duyệt cũ
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    
-    // Strict Transport Security - yêu cầu HTTPS
-    if (process.env.NODE_ENV === 'production') {
-        res.setHeader(
-            'Strict-Transport-Security',
-            'max-age=31536000; includeSubDomains; preload'
-        );
-    }
-    
-    // Content Security Policy - kiểm soát tài nguyên được phép tải
-    const cspDirectives = [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: https://res.cloudinary.com",
-        "font-src 'self' data:",
-        "connect-src 'self'",
-        "frame-ancestors 'none'",
-        "form-action 'self'"
-    ].join('; ');
-    res.setHeader('Content-Security-Policy', cspDirectives);
-    
-    next();
-});
+app.use(helmet({
+    // Tắt CSP cho route OAuth callback để tránh lỗi
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+            connectSrc: ["'self'", "https://*.googleapis.com"],
+            frameSrc: ["'self'", "https://accounts.google.com"],
+            formAction: ["'self'", "https://accounts.google.com"],
+            frameAncestors: ["'none'"],
+            fontSrc: ["'self'", "data:"],
+        },
+    },
+}));
 
 // middleware
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ 
+    extended: true, 
+    limit: '10mb'
+}));
 app.use(cookieParser());
 
 // Nén dữ liệu để giảm kích thước phản hồi
@@ -76,20 +59,42 @@ app.use(compression());
 // Theo dõi thời gian phản hồi
 app.use(responseTime());
 
-// Middleware sanitize tất cả dữ liệu đầu vào (body, query, params)
-app.use(sanitizeMiddleware);
+// Chỉ áp dụng sanitize middleware cho các route không phải OAuth
+app.use((req, res, next) => {
+    // Bỏ qua sanitize cho OAuth routes
+    if (req.path.includes('/auth/google') || req.path.includes('/callback')) {
+        return next();
+    }
+    sanitizeMiddleware(req, res, next);
+});
 
-// Apply basic rate limiter to all routes
-app.use(basicLimiter);
-
+// CORS configuration - Apply before routes and after other middleware
+// Apply CORS first to ensure CORS headers are sent in error responses as well
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL || 'http://localhost:5173' 
-        : 'http://localhost:5173',
+    origin: ['http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
     credentials: true,
-    optionsSuccessStatus: 200
-}
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'expires']
+};
 app.use(cors(corsOptions));
+
+// Apply basic rate limiter with less restrictive settings during development
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction) {
+    app.use(basicLimiter);
+} else {
+    // More permissive rate limiting during development
+    app.use((req, res, next) => {
+        // Check if the request is from development environment
+        if (req.headers.origin === 'http://localhost:5173') {
+            // Skip rate limiting for development requests
+            return next();
+        }
+        // Apply rate limiting for other requests
+        basicLimiter(req, res, next);
+    });
+}
 
 // Configure session before initializing passport
 app.use(session({
@@ -100,7 +105,7 @@ app.use(session({
     cookie: { 
         secure: process.env.NODE_ENV === 'production', // Secure in production
         httpOnly: true, // Prevent client-side JS from reading the cookie
-        sameSite: 'strict', // CSRF protection
+        sameSite: 'lax', // Đổi từ strict sang lax để cho phép chuyển hướng OAuth
         maxAge: 24 * 60 * 60 * 1000 // 1 day
     }
 }));

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Navbar from '../shared/Navbar'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
@@ -23,6 +23,29 @@ const Login = () => {
     const { loading, user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const loadingTimeoutRef = useRef(null);
+    
+    // Thêm timeout để reset trạng thái loading nếu kéo dài quá lâu
+    useEffect(() => {
+        if (loading) {
+            loadingTimeoutRef.current = setTimeout(() => {
+                console.log("Login timeout - resetting loading state");
+                dispatch(setLoading(false));
+                toast.error("Đăng nhập mất nhiều thời gian. Vui lòng thử lại.");
+            }, 10000); // 10 giây timeout
+        } else {
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+                loadingTimeoutRef.current = null;
+            }
+        }
+        
+        return () => {
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+            }
+        };
+    }, [loading, dispatch]);
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
@@ -30,13 +53,27 @@ const Login = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
+        // Validate input trước khi gửi request
+        if (!input.email || !input.password || !input.role) {
+            toast.error("Vui lòng điền đầy đủ thông tin đăng nhập");
+            return;
+        }
+        
         try {
+            // Reset loading state trước khi bắt đầu để đảm bảo trạng thái mới
+            dispatch(setLoading(false));
             dispatch(setLoading(true));
             
-            // Sử dụng axios thay vì createSecureAxios
+            // Đặt timeout cho request để tránh chờ quá lâu
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            
             const res = await axios.post(`${USER_API_END_POINT}/login`, input, {
-                withCredentials: true
+                withCredentials: true,
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (res.data.success) {
                 dispatch(setUser(res.data.user));
@@ -49,15 +86,28 @@ const Login = () => {
                 toast.success(`Chào mừng trở lại ${res.data.user.fullname}`);
             }
         } catch (error) {
-            console.log(error);
-            toast.error(error.response?.data?.message || "Đăng nhập thất bại");
+            console.error("Login error:", error);
+            if (error.name === 'AbortError') {
+                toast.error("Đăng nhập quá thời gian. Vui lòng thử lại.");
+            } else {
+                toast.error(error.response?.data?.message || "Đăng nhập thất bại");
+            }
         } finally {
             dispatch(setLoading(false));
         }
     }
 
     const handleGoogleLogin = () => {
-        window.location.href = `${USER_API_END_POINT}/auth/google`;
+        // Tạo URL đầy đủ cho endpoint đăng nhập Google
+        const apiUrl = USER_API_END_POINT.startsWith('http') 
+            ? `${USER_API_END_POINT}/auth/google` 
+            : `${window.location.origin}${USER_API_END_POINT}/auth/google`;
+            
+        console.log("Đang chuyển hướng đến Google OAuth:", apiUrl);
+        
+        // Thêm tham số để tránh cache
+        const redirectUrl = `${apiUrl}?t=${Date.now()}`;
+        window.location.href = redirectUrl;
     }
 
     useEffect(() => {

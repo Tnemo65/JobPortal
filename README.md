@@ -1,145 +1,230 @@
-# Job Portal Application
+# JobPortal - Nền tảng tìm việc làm trực tuyến
 
-Ứng dụng tuyển dụng được xây dựng với MERN Stack (MongoDB, Express.js, React.js, Node.js).
+![Job Portal Banner](https://via.placeholder.com/1200x300/48A6A7/FFFFFF?text=JobPortal)
 
-## Tính năng bảo mật chính
+## 📚 Giới thiệu
 
-### 1. Bảo vệ CSRF (Cross-Site Request Forgery)
-- Sử dụng middleware CSRF protection để bảo vệ khỏi các cuộc tấn công CSRF
-- API endpoint `/api/csrf-token` để cung cấp CSRF token cho client
-- Tự động thêm CSRF token vào mọi request thông qua utility `csrf.js`
+JobPortal là nền tảng tìm việc làm toàn diện được phát triển bằng MERN Stack (MongoDB, Express, React, Node.js), giúp kết nối ứng viên tìm việc và nhà tuyển dụng một cách hiệu quả. Với giao diện thân thiện và tính năng đa dạng, JobPortal là giải pháp lý tưởng cho những người đang tìm kiếm cơ hội nghề nghiệp mới và các công ty đang cần tuyển dụng nhân sự.
 
-### 2. HTTP Security Headers
-- Helmet.js để thiết lập các HTTP headers bảo mật
-- Content Security Policy (CSP) để hạn chế nguồn tài nguyên
-- X-Frame-Options để ngăn clickjacking
-- Strict-Transport-Security (HSTS) để yêu cầu HTTPS
-- X-XSS-Protection và X-Content-Type-Options để bảo vệ khỏi XSS và MIME-sniffing
+## 🌟 Tính năng chính
 
-### 3. Rate Limiting
-- Giới hạn số lượng request từ một IP trong khoảng thời gian nhất định
-- `basicLimiter` cho tất cả các routes
-- `apiLimiter` cho các API endpoints quan trọng
+### 🔍 Dành cho người tìm việc
+- **Tạo hồ sơ cá nhân**: Ứng viên có thể tạo hồ sơ với thông tin chi tiết về bản thân, kỹ năng và kinh nghiệm
+- **Tìm kiếm công việc**: Tìm kiếm công việc phù hợp với nhiều bộ lọc (vị trí, loại công việc, mức lương...)
+- **Lưu công việc yêu thích**: Đánh dấu và theo dõi các cơ hội việc làm ưng ý
+- **Ứng tuyển trực tuyến**: Nộp đơn ứng tuyển trực tiếp qua nền tảng với CV đã tải lên
+- **Theo dõi đơn ứng tuyển**: Xem được trạng thái các đơn đã nộp
+- **Đăng nhập bằng tài khoản Google**: Đơn giản hóa quá trình đăng nhập/đăng ký
 
-### 4. Authentication và Authorization
-- JWT authentication với cookie httpOnly
-- Middleware `isAuthenticated` để bảo vệ các routes yêu cầu đăng nhập
-- Role-based access control với middleware `checkRole`
-- Kiểm tra quyền sở hữu tài nguyên với middleware `checkOwnership`
+### 💼 Dành cho nhà tuyển dụng
+- **Quản lý công ty**: Tạo và quản lý thông tin công ty
+- **Đăng tin tuyển dụng**: Đăng tải các vị trí cần tuyển dụng với thông tin chi tiết
+- **Quản lý ứng viên**: Xem xét, chấp nhận hoặc từ chối đơn ứng tuyển
+- **Bảng điều khiển**: Giao diện quản trị trực quan cho việc theo dõi tin tuyển dụng
 
-### 5. Bảo mật dữ liệu
-- Mã hóa mật khẩu với bcrypt
-- Xác thực đầu vào chặt chẽ
-- Middleware `strongPassword` để đảm bảo mật khẩu mạnh
-- Xử lý lỗi chi tiết và phản hồi an toàn
+## 🛠️ Công nghệ sử dụng
 
-## Cách triển khai CSRF protection
+### Frontend
+- **React**: Thư viện JavaScript để xây dựng giao diện người dùng
+- **Redux Toolkit**: Quản lý state của ứng dụng
+- **TailwindCSS**: Framework CSS cho thiết kế responsive
+- **Framer Motion**: Thư viện animation cho React
+- **Axios**: Thực hiện các HTTP request
+- **React Router**: Định tuyến trong ứng dụng
+- **Redux Persist**: Lưu trữ state vào local storage
+- **shadcn/ui**: Hệ thống UI component chất lượng cao và có thể tùy chỉnh
+- **Sonner**: Hiển thị thông báo toast đẹp mắt
 
 ### Backend
-```javascript
-// Thêm CSRF middleware vào Express app
-import csrfProtection, { csrfErrorHandler } from "./middlewares/csrf-protection.js";
+- **Node.js**: Môi trường runtime JavaScript phía server
+- **Express**: Framework web cho Node.js
+- **MongoDB**: Cơ sở dữ liệu NoSQL
+- **Mongoose**: ODM (Object Data Modeling) cho MongoDB
+- **JWT**: Xác thực và ủy quyền người dùng
+- **Bcrypt**: Mã hóa mật khẩu
+- **Multer**: Xử lý upload file
+- **Cloudinary**: Lưu trữ hình ảnh và file
+- **Redis**: Cache và quản lý phiên làm việc
+- **Passport.js**: Xác thực với các dịch vụ của bên thứ ba (Google, Facebook)
+- **Express Rate Limit**: Giới hạn request để ngăn chặn tấn công
 
-// CSRF Protection - loại trừ một số routes như SSO
-const csrfExcludedRoutes = ['/api/v1/user/auth/google', '/api/v1/user/auth/google/callback'];
-app.use((req, res, next) => {
-    if (csrfExcludedRoutes.includes(req.path)) {
-        next();
-    } else {
-        csrfProtection(req, res, next);
-    }
-});
-app.use(csrfErrorHandler);
+## 📋 Yêu cầu hệ thống
 
-// Cung cấp CSRF token cho client
-app.get('/api/csrf-token', (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
-});
+- Node.js phiên bản 18 trở lên
+- MongoDB 5.0 trở lên
+- Redis 6.0 trở lên (cho cache và quản lý phiên)
+- Tài khoản Cloudinary (cho việc lưu trữ hình ảnh và file)
+- Kết nối Internet ổn định
+
+## 🚀 Hướng dẫn cài đặt
+
+### 1. Clone repository
+
+```bash
+git clone https://github.com/your-username/jobportal-yt-main.git
+cd jobportal-yt-main
+```
+
+### 2. Cài đặt dependencies cho Backend
+
+```bash
+cd backend
+npm install
+```
+
+### 3. Thiết lập tệp .env cho Backend
+
+Tạo một file `.env` trong thư mục `backend` với nội dung:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/jobportal
+PORT=8000
+JWT_SECRET=your_jwt_secret_key
+REDIS_URL=redis://localhost:6379
+CLOUD_NAME=your_cloudinary_name
+CLOUD_API_KEY=your_cloudinary_api_key
+CLOUD_API_SECRET=your_cloudinary_api_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+CLIENT_URL=http://localhost:5173
+```
+
+### 4. Cài đặt dependencies cho Frontend
+
+```bash
+cd ../frontend
+npm install
+```
+
+### 5. Thiết lập tệp .env cho Frontend
+
+Tạo một file `.env` trong thư mục `frontend` với nội dung:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+### 6. Khởi chạy ứng dụng
+
+#### Backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+#### Frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Sau khi khởi chạy, Frontend sẽ chạy tại địa chỉ `http://localhost:5173`, và Backend sẽ chạy tại `http://localhost:8000`.
+
+## 🧩 Cấu trúc dự án
+
+### Backend
+```
+backend/
+├── controllers/         # Xử lý logic nghiệp vụ
+├── middlewares/         # Middleware xác thực và bảo mật
+├── models/              # MongoDB models
+├── routes/              # API endpoints
+├── utils/               # Helper functions
+└── index.js             # Entry point
 ```
 
 ### Frontend
-```javascript
-// utils/csrf.js
-import axios from 'axios';
-
-let csrfToken = null;
-
-// Lấy CSRF token từ server
-export const fetchCsrfToken = async () => {
-    try {
-        const response = await axios.get('/api/csrf-token', { withCredentials: true });
-        csrfToken = response.data.csrfToken;
-        return csrfToken;
-    } catch (error) {
-        console.error('Không thể lấy CSRF token:', error);
-        throw error;
-    }
-};
-
-// Tạo axios instance với CSRF token
-export const createSecureAxios = async () => {
-    if (!csrfToken) {
-        await fetchCsrfToken();
-    }
-    
-    const secureAxios = axios.create({
-        withCredentials: true,
-        headers: {
-            'CSRF-Token': csrfToken
-        }
-    });
-    
-    return secureAxios;
-};
+```
+frontend/
+├── public/              # Static assets
+├── src/
+│   ├── components/      # UI components
+│   │   ├── admin/       # Admin dashboard components
+│   │   ├── auth/        # Authentication components
+│   │   ├── shared/      # Shared components
+│   │   └── ui/          # UI library components
+│   ├── hooks/           # Custom React hooks
+│   ├── lib/             # Utility functions
+│   ├── pages/           # Page components
+│   ├── redux/           # Redux store và slices
+│   └── utils/           # Helper functions
+└── index.html           # HTML entry point
 ```
 
-## Triển khai ứng dụng
+## 📷 Ảnh chụp màn hình
 
-### Backend
-1. Di chuyển vào thư mục backend:
-   ```
-   cd backend
-   ```
+<details>
+<summary>Trang chủ</summary>
+<img src="https://via.placeholder.com/800x450/48A6A7/FFFFFF?text=Trang+Chu" alt="Trang chủ">
+</details>
 
-2. Cài đặt dependencies:
-   ```
-   npm install
-   ```
+<details>
+<summary>Trang tìm kiếm công việc</summary>
+<img src="https://via.placeholder.com/800x450/48A6A7/FFFFFF?text=Tim+Kiem+Cong+Viec" alt="Trang tìm kiếm">
+</details>
 
-3. Tạo file .env với các biến môi trường cần thiết:
-   ```
-   MONGO_URI=your_mongodb_connection_string
-   SECRET_KEY=your_jwt_secret_key
-   SECRET_ENCRYPTION_KEY=your_encryption_key
-   CLOUD_NAME=your_cloudinary_cloud_name
-   API_KEY=your_cloudinary_api_key
-   API_SECRET=your_cloudinary_api_secret
-   PORT=8000
-   ```
+<details>
+<summary>Trang chi tiết công việc</summary>
+<img src="https://via.placeholder.com/800x450/48A6A7/FFFFFF?text=Chi+Tiet+Cong+Viec" alt="Chi tiết công việc">
+</details>
 
-4. Khởi động server:
-   ```
-   npm start
-   ```
+<details>
+<summary>Bảng điều khiển Nhà tuyển dụng</summary>
+<img src="https://via.placeholder.com/800x450/48A6A7/FFFFFF?text=Bang+Dieu+Khien+Admin" alt="Bảng điều khiển">
+</details>
 
-### Frontend
-1. Di chuyển vào thư mục frontend:
-   ```
-   cd frontend
-   ```
+## 📦 API Documentation
 
-2. Cài đặt dependencies:
-   ```
-   npm install
-   ```
+API được tổ chức theo các endpoint chính sau:
 
-3. Khởi động ứng dụng:
-   ```
-   npm run dev
-   ```
+- `/api/v1/user` - Quản lý người dùng và xác thực
+- `/api/v1/company` - Quản lý thông tin công ty
+- `/api/v1/job` - Quản lý tin tuyển dụng
+- `/api/v1/application` - Quản lý đơn ứng tuyển
 
-## Lưu ý bảo mật
-1. Luôn sử dụng HTTPS trong môi trường production
-2. Cập nhật các dependencies thường xuyên để vá các lỗ hổng bảo mật
-3. Không lưu trữ SECRET_KEY và các thông tin nhạy cảm khác trong mã nguồn
-4. Sử dụng các công cụ kiểm tra bảo mật như OWASP ZAP hoặc Snyk để kiểm tra các lỗ hổng
+Chi tiết API có thể được xem trong tệp Postman Collection đi kèm.
+
+## 🔒 Bảo mật
+
+Dự án áp dụng nhiều biện pháp bảo mật:
+- JWT cho xác thực người dùng
+- Bcrypt cho mã hóa mật khẩu
+- Sanitization cho dữ liệu đầu vào
+- Rate limiting để ngăn chặn tấn công brute force
+- CORS protection
+- Helmet để thiết lập các HTTP header an toàn
+
+## 🚥 Roadmap
+
+- [ ] Thêm tính năng đánh giá công ty
+- [ ] Tích hợp chatbot AI cho hỗ trợ tìm kiếm
+- [ ] Thêm biểu đồ thống kê cho admin dashboard
+- [ ] Phân tích số liệu về việc ứng tuyển
+- [ ] Tùy chọn đăng nhập bằng Facebook/LinkedIn
+- [ ] Chức năng nhắn tin trực tiếp giữa nhà tuyển dụng và ứng viên
+
+## 👥 Đóng góp
+
+Chúng tôi rất hoan nghênh mọi đóng góp cho dự án! Vui lòng làm theo các bước sau:
+
+1. Fork repository
+2. Tạo branch tính năng (`git checkout -b feature/amazing-feature`)
+3. Commit các thay đổi (`git commit -m 'Add some amazing feature'`)
+4. Push lên branch (`git push origin feature/amazing-feature`)
+5. Mở Pull Request
+
+## 📄 Giấy phép
+
+Dự án được cấp phép theo [MIT License](LICENSE).
+
+## 📧 Liên hệ
+
+Nếu có bất kỳ câu hỏi hoặc đề xuất nào, vui lòng liên hệ:
+
+Email: your-email@example.com
+
+---
+
+&copy; 2025 JobPortal. Developed with ❤️ by Your Name.
