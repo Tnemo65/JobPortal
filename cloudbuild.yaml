@@ -83,6 +83,5 @@ images:
   - 'gcr.io/empyrean-harbor-456906-s2/frontend:latest'
 
 timeout: 1800s
-
 options:
   logging: CLOUD_LOGGING_ONLY
