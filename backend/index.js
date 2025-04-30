@@ -17,9 +17,9 @@ import { basicLimiter } from "./middlewares/rate-limiter.js";
 import sanitizeMiddleware from "./utils/sanitizer.js";
 import { redisClient } from "./utils/redis-cache.js";
 
-// Import RedisStore constructor để tránh lỗi khi sử dụng ES modules
-import connectRedis from "connect-redis";
-const RedisStore = connectRedis.default;
+// Import RedisStore từ connect-redis đúng cách
+import { createClient } from "redis";
+import { RedisStore } from "connect-redis";
 
 dotenv.config({});
 
@@ -116,13 +116,15 @@ if (redisClient && process.env.USE_REDIS_SESSIONS === 'true') {
     try {
         console.log('Attempting to use Redis for session storage');
         
-        // Đảm bảo Redis đã được kết nối
-        if (!redisClient.isReady) {
+        // Chỉ kết nối nếu client chưa sẵn sàng và chưa được kết nối
+        if (!redisClient.isReady && !redisClient.isOpen) {
             console.log('Redis client not ready, attempting to connect...');
             // Thử kết nối nếu chưa sẵn sàng
             redisClient.connect().catch(err => {
                 console.error('Failed to connect to Redis:', err);
             });
+        } else {
+            console.log('Redis client already connected or ready');
         }
         
         // Kiểm tra nếu Redis đã sẵn sàng thì mới sử dụng RedisStore
@@ -169,7 +171,8 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`server is working on http://localhost:${PORT}`);
+    console.log(`Server is running on PORT ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
 });
 
 // connect db

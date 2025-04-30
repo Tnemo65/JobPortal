@@ -15,6 +15,15 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: gcr.io/empyrean-harbor-456906-s2/jobportal-frontend:latest
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:latest
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5

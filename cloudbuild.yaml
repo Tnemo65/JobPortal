@@ -34,20 +34,12 @@ steps:
     id: 'fix-permissions'
     waitFor: ['frontend-install']
     
-  # Build frontend (production build)
-  - name: 'node:18'
-    dir: 'frontend'
-    entrypoint: 'npm'
-    args: ['run', 'build']
-    id: 'frontend-build'
-    waitFor: ['fix-permissions']
-    
-  # Build frontend docker image
+  # Build frontend docker image directly (skip build step since we're using dev mode)
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'frontend'
     args: ['build', '-t', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest', '.']
     id: 'frontend-docker-build'
-    waitFor: ['frontend-build']
+    waitFor: ['fix-permissions']
 
   # Push frontend to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -72,7 +64,7 @@ steps:
     - '--min-instances=1'
     - '--max-instances=5'
     - '--timeout=300s'
-    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=https://backend-service-url,FRONTEND_URL=https://frontend-service-url,USE_SHARDING=true,GOOGLE_CLIENT_ID=50744604192-kqpeapspiuv2csk72lhia6vf64afe06b.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,NODE_ENV=production,USE_REDIS_CACHE=false,USE_REDIS_SESSIONS=false'
+    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=https://backend-service-url,FRONTEND_URL=https://frontend-service-url,USE_SHARDING=true,GOOGLE_CLIENT_ID=50744604192-kqpeapspiuv2csk72lhia6vf64afe06b.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,NODE_ENV=development,USE_REDIS_CACHE=false,USE_REDIS_SESSIONS=false'
     waitFor: ['backend-push']
     
   # Deploy to Cloud Run (frontend)
@@ -85,7 +77,7 @@ steps:
     - '--image=gcr.io/empyrean-harbor-456906-s2/frontend:latest'
     - '--region=us-central1'
     - '--platform=managed'
-    - '--port=80'
+    - '--port=5173'
     - '--allow-unauthenticated'
     waitFor: ['frontend-push']
 
