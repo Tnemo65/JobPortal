@@ -13,16 +13,26 @@ const enableRedis = cacheWithRedis || process.env.USE_REDIS_SESSIONS === 'true';
 let redisClient = null;
 
 // Create Redis client for session storage and potentially caching
-if (enableRedis) {
+if (enableRedis && process.env.REDIS_URL) {
     try {
+        console.log('Initializing Redis client with URL:', 
+            process.env.REDIS_URL.replace(/\/\/(.*)@/, '//***@')); // Log URL with hidden credentials
+        
         // Create Redis client with optimized configuration
         redisClient = createClient({
             url: process.env.REDIS_URL || 'redis://localhost:6379',
             socket: {
                 reconnectStrategy: (retries) => {
-                    // Exponential backoff strategy
-                    return Math.min(retries * 50, 1000);
-                }
+                    // Exponential backoff strategy with max retry
+                    if (retries > 10) {
+                        console.error(`Redis connection failed after ${retries} attempts, giving up`);
+                        return new Error('Redis connection attempts exhausted');
+                    }
+                    const delay = Math.min(retries * 50, 3000);
+                    console.log(`Retrying Redis connection in ${delay}ms (attempt ${retries})`);
+                    return delay;
+                },
+                connectTimeout: 10000, // 10 seconds
             }
         });
 
@@ -33,15 +43,30 @@ if (enableRedis) {
         redisClient.on('connect', () => {
             console.log('Redis client connected successfully');
         });
+        
+        redisClient.on('reconnecting', () => {
+            console.log('Redis client reconnecting...');
+        });
+        
+        redisClient.on('end', () => {
+            console.log('Redis client connection closed');
+        });
 
-        // Connect to Redis
+        // Connect to Redis - make this non-blocking so it doesn't prevent app startup
         (async () => {
-            await redisClient.connect();
+            try {
+                await redisClient.connect();
+            } catch (err) {
+                console.error('Failed to connect to Redis during initialization:', err);
+                // Keep the redisClient reference, but app can still start without Redis
+            }
         })();
     } catch (err) {
         console.error('Failed to create Redis client:', err);
         redisClient = null;
     }
+} else {
+    console.log('Redis not enabled or URL not provided, skipping Redis initialization');
 }
 
 // Cấu hình apicache để sử dụng Redis nếu có
@@ -64,7 +89,7 @@ const cacheOptions = {
         // Build a comprehensive cache key
         return `${role}-${userId}${routeParams}${queryParams ? '-' + queryParams : ''}`;
     },
-    redisClient: cacheWithRedis ? redisClient : null,
+    redisClient: cacheWithRedis && redisClient && redisClient.isReady ? redisClient : null,
     // Default TTL handling
     defaultDuration: '5 minutes',
     // Enable debug logs in development
@@ -78,7 +103,7 @@ const apiCache = apicache.options(cacheOptions);
 
 // Helper function to clear cache for a specific user
 const clearUserCache = async (userId) => {
-    if (cacheWithRedis && redisClient) {
+    if (cacheWithRedis && redisClient && redisClient.isReady) {
         try {
             // Get all keys with this user's ID
             const keys = await redisClient.keys(`*${userId}*`);
@@ -95,4 +120,9 @@ const clearUserCache = async (userId) => {
     }
 };
 
-export { apiCache, redisClient, clearUserCache };
+// Helper to check if Redis is connected and ready
+const isRedisReady = () => {
+    return !!(redisClient && redisClient.isReady);
+};
+
+export { apiCache, redisClient, clearUserCache, isRedisReady };

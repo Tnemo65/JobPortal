@@ -11,7 +11,7 @@ steps:
     dir: 'backend'
     args: ['build', '-t', 'gcr.io/empyrean-harbor-456906-s2/backend:latest', '.']
     id: 'backend-build'
-    waitFor: ['backend-install']  # Đã thay đổi từ 'backend-test' thành 'backend-install'
+    waitFor: ['backend-install']
 
   # Push backend to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -25,22 +25,22 @@ steps:
     entrypoint: 'npm'
     args: ['install']
     id: 'frontend-install'
-
-  # Fix permissions
+    
+  # Fix permissions for vite
   - name: 'node:18'
     dir: 'frontend'
     entrypoint: 'chmod'
     args: ['-R', '755', './node_modules/.bin/']
     id: 'fix-permissions'
     waitFor: ['frontend-install']
-
+    
   # Build frontend (production build)
   - name: 'node:18'
     dir: 'frontend'
     entrypoint: 'npm'
     args: ['run', 'build']
     id: 'frontend-build'
-    waitFor: ['frontend-install']
+    waitFor: ['fix-permissions']
     
   # Build frontend docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -55,7 +55,7 @@ steps:
     id: 'frontend-push'
     waitFor: ['frontend-docker-build']
 
- # Deploy to Cloud Run (backend)
+  # Deploy to Cloud Run (backend)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -68,8 +68,11 @@ steps:
     - '--port=8080'
     - '--allow-unauthenticated'
     - '--memory=512Mi'
+    - '--cpu=1'
+    - '--min-instances=1'
+    - '--max-instances=5'
     - '--timeout=300s'
-    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=https://backend-service-url,FRONTEND_URL=https://frontend-service-url,USE_SHARDING=true,GOOGLE_CLIENT_ID=50744604192-kqpeapspiuv2csk72lhia6vf64afe06b.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,NODE_ENV=production'
+    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=https://backend-service-url,FRONTEND_URL=https://frontend-service-url,USE_SHARDING=true,GOOGLE_CLIENT_ID=50744604192-kqpeapspiuv2csk72lhia6vf64afe06b.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,NODE_ENV=production,USE_REDIS_CACHE=false,USE_REDIS_SESSIONS=false'
     waitFor: ['backend-push']
     
   # Deploy to Cloud Run (frontend)

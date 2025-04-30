@@ -15,9 +15,11 @@ import passport from './utils/passport.js';
 import session from 'express-session';
 import { basicLimiter } from "./middlewares/rate-limiter.js";
 import sanitizeMiddleware from "./utils/sanitizer.js";
-import { createClient } from "redis";
-import { RedisStore } from "connect-redis";
 import { redisClient } from "./utils/redis-cache.js";
+
+// Import RedisStore constructor để tránh lỗi khi sử dụng ES modules
+import connectRedis from "connect-redis";
+const RedisStore = connectRedis.default;
 
 dotenv.config({});
 
@@ -94,11 +96,10 @@ if (isProduction) {
         // Apply rate limiting for other requests
         basicLimiter(req, res, next);
     });
-}
+};
 
-// Configure session before initializing passport
-app.use(session({
-    store: new RedisStore({ client: redisClient }),
+// Cấu hình session với fallback khi không có Redis
+const sessionConfig = {
     secret: process.env.SECRET_KEY,
     resave: false,
     saveUninitialized: false,
@@ -108,7 +109,39 @@ app.use(session({
         sameSite: 'lax', // Đổi từ strict sang lax để cho phép chuyển hướng OAuth
         maxAge: 24 * 60 * 60 * 1000 // 1 day
     }
-}));
+};
+
+// Kiểm tra Redis client trước khi sử dụng
+if (redisClient && process.env.USE_REDIS_SESSIONS === 'true') {
+    try {
+        console.log('Attempting to use Redis for session storage');
+        
+        // Đảm bảo Redis đã được kết nối
+        if (!redisClient.isReady) {
+            console.log('Redis client not ready, attempting to connect...');
+            // Thử kết nối nếu chưa sẵn sàng
+            redisClient.connect().catch(err => {
+                console.error('Failed to connect to Redis:', err);
+            });
+        }
+        
+        // Kiểm tra nếu Redis đã sẵn sàng thì mới sử dụng RedisStore
+        if (redisClient.isReady) {
+            sessionConfig.store = new RedisStore({ client: redisClient });
+            console.log('Using Redis session store');
+        } else {
+            console.warn('Redis not ready, using memory session store instead');
+        }
+    } catch (error) {
+        console.error('Error initializing Redis store:', error);
+        console.warn('Using memory session store as fallback');
+    }
+} else {
+    console.log('Redis not configured or disabled, using memory session store');
+}
+
+// Configure session
+app.use(session(sessionConfig));
 
 // Initialize Passport
 app.use(passport.initialize());
