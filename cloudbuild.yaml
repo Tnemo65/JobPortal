@@ -65,6 +65,8 @@ steps:
     - '--image=gcr.io/empyrean-harbor-456906-s2/backend:latest'
     - '--region=us-central1'
     - '--platform=managed'
+    - '--port=8080'
+    - '--allow-unauthenticated'
     waitFor: ['backend-push']
     
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
