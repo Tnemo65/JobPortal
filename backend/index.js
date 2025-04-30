@@ -135,9 +135,9 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`server is working on http://localhost:${PORT}`);
-})
+});
 
 // connect db
 connectDB();

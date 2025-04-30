@@ -27,12 +27,12 @@ RUN chown -R nodejs:nodejs /usr/src/app
 # Chuyển đổi sang user non-root
 USER nodejs
 
-# Expose port 8000
-#hihi
+# Expose port 8080
 EXPOSE 8080
 
 # Biến môi trường (nạp từ docker-compose)
 ENV NODE_ENV=production
 ENV PORT=8080
+
 # Lệnh khởi động app
 CMD ["node", "index.js"]
