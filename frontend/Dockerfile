@@ -3,36 +3,25 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Copy package.json trước
-COPY package.json ./
+# Copy package.json và package-lock.json
+COPY package*.json ./
 
-# Kiểm tra xem có file yarn.lock hay không và copy nếu có
-COPY yarn.lock* ./
-COPY package-lock.json* ./
+# Cài đặt dependencies bằng npm
+RUN npm ci || npm install
 
-# Sử dụng npm hoặc yarn tùy theo file lock có sẵn
-RUN if [ -f yarn.lock ]; then \
-        yarn install --frozen-lockfile; \
-    else \
-        npm ci || npm install; \
-    fi
-
+# Copy tất cả file còn lại vào container
 COPY . .
-RUN chmod +x ./node_modules/.bin/vite
-# Build production
-RUN if [ -f yarn.lock ]; then \
-        yarn build; \
-    else \
-        npm run build; \
-    fi
+
+# Chạy build production
+RUN npm run build
 
 # Runtime stage với nginx
 FROM nginx:stable-alpine
 
-# Copy cấu hình SPA routing cho Nginx
+# Copy thư mục dist (được build từ giai đoạn trước) vào thư mục mặc định của nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Tạo file cấu hình Nginx cho SPA routing
+# Cấu hình nginx cho SPA routing
 RUN echo 'server { \
     listen 8080; \
     server_name _; \
@@ -43,6 +32,8 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
+# Expose cổng 8080
 EXPOSE 8080
 
+# Lệnh khởi động nginx
 CMD ["nginx", "-g", "daemon off;"]
