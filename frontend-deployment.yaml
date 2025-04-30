@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: frontend
   namespace: argocd
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: backend
+      app: frontend
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       containers:
-        - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:latest
+        - name: frontend
+          image: gcr.io/empyrean-harbor-456906-s2/jobportal-frontend:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 3000
