@@ -98,7 +98,13 @@ spec:
                   key: USE_REDIS_SESSIONS
           readinessProbe:
             httpGet:
-              path: /api/v1/job
+              path: /health
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10

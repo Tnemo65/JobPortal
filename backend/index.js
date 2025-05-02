@@ -175,6 +175,15 @@ const initApp = async () => {
     app.use(passport.initialize());
     app.use(passport.session());
 
+    // Health check endpoint cho Kubernetes readiness/liveness probe
+    app.get('/health', (req, res) => {
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        service: 'job-portal-backend'
+      });
+    });
+
     // api's routes
     app.use("/api/v1/user", userRoute);
     app.use("/api/v1/company", companyRoute);
@@ -194,9 +203,8 @@ const initApp = async () => {
         });
     });
 
-    const PORT = process.env.PORT || 8080;
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server is running on PORT ${PORT}`);
+    app.listen( process.env.PORT, '0.0.0.0', () => {
+        console.log(`Server is running on PORT ${process.env.PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV}`);
         console.log(`Session store: ${sessionConfig.store ? 'Redis' : 'Memory'}`);
     });
