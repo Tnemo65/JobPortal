@@ -20,52 +20,82 @@ spec:
             - containerPort: 8080
           env:
             - name: PORT
-              value: "8080"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PORT
             - name: NODE_ENV
               value: "production"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: SESSION_SECRET
+                  key: SECRET_KEY
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: google-oauth-secret
+                  name: app-secrets
                   key: GOOGLE_CLIENT_ID
             - name: GOOGLE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: google-oauth-secret
+                  name: app-secrets
                   key: GOOGLE_CLIENT_SECRET
             - name: MONGO_URI
               valueFrom:
                 secretKeyRef:
-                  name: mongodb-secret
-                  key: mongo-uri
+                  name: app-secrets
+                  key: MONGO_URI
             - name: API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: extra-app-secrets
+                  name: app-secrets
                   key: API_KEY
-
             - name: API_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: extra-app-secrets
+                  name: app-secrets
                   key: API_SECRET
-
             - name: CLOUD_NAME
               valueFrom:
                 secretKeyRef:
-                  name: extra-app-secrets
+                  name: app-secrets
                   key: CLOUD_NAME
-
             - name: SECRET_ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
-                  name: extra-app-secrets
+                  name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
+            - name: BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: BASE_URL
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: FRONTEND_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_URL
+            - name: USE_SHARDING
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: USE_SHARDING
+            - name: USE_REDIS_CACHE
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: USE_REDIS_CACHE
+            - name: USE_REDIS_SESSIONS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: USE_REDIS_SESSIONS
           readinessProbe:
             httpGet:
               path: /api/v1/job
