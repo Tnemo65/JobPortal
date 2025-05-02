@@ -38,6 +38,11 @@ spec:
                 secretKeyRef:
                   name: google-oauth-secret
                   key: GOOGLE_CLIENT_SECRET
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: mongo-uri
           readinessProbe:
             httpGet:
               path: /api/v1/job
