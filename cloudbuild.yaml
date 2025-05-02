@@ -77,7 +77,7 @@ steps:
     - '--image=gcr.io/empyrean-harbor-456906-s2/frontend:latest'
     - '--region=us-central1'
     - '--platform=managed'
-    - '--port=5173'
+    - '--port=3000'
     - '--allow-unauthenticated'
     waitFor: ['frontend-push']
 

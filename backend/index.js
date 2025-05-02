@@ -100,7 +100,7 @@ if (isProduction) {
 
 // Cấu hình session với fallback khi không có Redis
 const sessionConfig = {
-    secret: process.env.SECRET_KEY,
+    secret: process.env.SECRET_KEY || 'jobportal_default_secret_key_change_in_production',
     resave: false,
     saveUninitialized: false,
     cookie: { 
