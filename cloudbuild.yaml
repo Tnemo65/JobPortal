@@ -64,7 +64,7 @@ steps:
     - '--min-instances=1'
     - '--max-instances=5'
     - '--timeout=300s'
-    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=https://backend-service-url,FRONTEND_URL=https://frontend-service-url,USE_SHARDING=true,GOOGLE_CLIENT_ID=50744604192-kqpeapspiuv2csk72lhia6vf64afe06b.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,NODE_ENV=development,USE_REDIS_CACHE=false,USE_REDIS_SESSIONS=false'
+    - '--set-env-vars=MONGO_URI=mongodb+srv://tnemo65ldt:W3Lr6wXF4rDVwAvy@cluster0.q2urbst.mongodb.net/JobPortal,USE_SHARDING=true,SECRET_KEY=your_secret_key,CLOUD_NAME=dcxmce3ff,API_KEY=555454186693259,API_SECRET=tf1uiBCcf4qdBeVKXOuxUqdF3I4,BASE_URL=http://localhost:8080,FRONTEND_URL=http://localhost:5173,GOOGLE_CLIENT_ID=1051764248688-kiv3ptllb1hcl61fpoouks8qro3ta8sl.apps.googleusercontent.com,GOOGLE_CLIENT_SECRET=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,SECRET_ENCRYPTION_KEY=1a8d389921aa670b21d5a3db50d0c779a4e86562329f131df5c55cc6eac7260d,USE_REDIS_CACHE=true,USE_REDIS_SESSIONS=true,REDIS_URL=redis://35.187.154.43:6379'
     waitFor: ['backend-push']
     
     
