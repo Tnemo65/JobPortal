@@ -3,10 +3,10 @@ kind: Deployment
 metadata:
   name: backend
   namespace: default
-  # annotations:
-  #   argocd-image-updater.argoproj.io/image-list: backend=gcr.io/empyrean-harbor-456906-s2/backend
-  #   argocd-image-updater.argoproj.io/write-back-method: git
-  #   argocd-image-updater.argoproj.io/backend.update-strategy: latest
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: backend=gcr.io/empyrean-harbor-456906-s2/backend
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/backend.update-strategy: latest
 spec:
   replicas: 3
   selector:
@@ -20,6 +20,7 @@ spec:
       containers:
         - name: backend
           image: gcr.io/empyrean-harbor-456906-s2/backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           resources:
