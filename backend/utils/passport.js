@@ -10,13 +10,6 @@ const baseURL = process.env.BASE_URL || 'http://localhost:8080';
 const callbackURL = `${baseURL}/api/v1/user/auth/google/callback`;
 
 console.log('Using Google OAuth callback URL:', callbackURL);
-console.log('Google OAuth environment:', {
-  clientIDExists: !!process.env.GOOGLE_CLIENT_ID,
-  clientSecretExists: !!process.env.GOOGLE_CLIENT_SECRET,
-  baseURL: process.env.BASE_URL || 'http://localhost:8080',
-  frontendURL: process.env.FRONTEND_URL || 'http://localhost:5173',
-  nodeEnv: process.env.NODE_ENV
-});
 
 // Kiểm tra các biến môi trường cần thiết
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -37,17 +30,11 @@ passport.use(new GoogleStrategy({
     userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
 }, async (req, accessToken, refreshToken, profile, done) => {
     try {
-        console.log('Google OAuth callback invoked with profile:', {
-            id: profile.id,
-            displayName: profile.displayName,
-            email: profile.emails?.[0]?.value,
-            hasPhotos: !!profile.photos?.length,
-            provider: profile.provider
-        });
+        console.log('Google OAuth profile received:', profile.displayName, profile.emails?.[0]?.value);
         
         // Kiểm tra dữ liệu profile hợp lệ
         if (!profile || !profile.emails || !profile.emails[0] || !profile.emails[0].value) {
-            console.error('Profile data invalid:', JSON.stringify(profile));
+            console.error('Profile data invalid:', profile);
             return done(new Error('Invalid profile data from Google'));
         }
 
@@ -57,24 +44,17 @@ passport.use(new GoogleStrategy({
         // Nếu user không tồn tại, tạo mới
         if (!user) {
             console.log('Creating new user from Google profile:', profile.displayName);
-            
-            try {
-                user = await User.create({
-                    fullname: profile.displayName || 'Google User',
-                    email: profile.emails[0].value,
-                    phoneNumber: '0000000000', // Số điện thoại mặc định
-                    password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Mật khẩu ngẫu nhiên
-                    role: 'student', // Vai trò mặc định
-                    profile: {
-                        profilePhoto: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : '',
-                        skills: []
-                    }
-                });
-                console.log('New user created successfully:', user.email);
-            } catch (createError) {
-                console.error('Failed to create new user:', createError);
-                return done(new Error('Failed to create new user: ' + createError.message));
-            }
+            user = await User.create({
+                fullname: profile.displayName || 'Google User',
+                email: profile.emails[0].value,
+                phoneNumber: '0000000000', // Số điện thoại mặc định
+                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Mật khẩu ngẫu nhiên
+                role: 'student', // Vai trò mặc định
+                profile: {
+                    profilePhoto: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : '',
+                    skills: []
+                }
+            });
         } else {
             console.log('User already exists:', user.email);
         }

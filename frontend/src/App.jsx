@@ -21,6 +21,7 @@ import { persistor } from './redux/store'
 import useAuthCheck from './hooks/useAuthCheck'
 import { Loader2 } from 'lucide-react'
 
+
 const appRouter = createBrowserRouter([
   {
     path: '/',
@@ -58,11 +59,6 @@ const appRouter = createBrowserRouter([
     path: "/sso-callback",
     element: <SSOCallback />
   },
-  // Google OAuth callback route
-  {
-    path: "/api/v1/user/auth/google/callback",
-    element: <SSOCallback />
-  },
   // admin ke liye yha se start hoga
   {
     path:"/admin/companies",
@@ -88,13 +84,14 @@ const appRouter = createBrowserRouter([
     path:"/admin/jobs/:id/applicants",
     element:<ProtectedRoute><Applicants/></ProtectedRoute> 
   },
+
 ])
 
 function App() {
-  // Use the auth check hook inside the component
+  // Sử dụng hook để kiểm tra phiên đăng nhập
   const { checkingAuth } = useAuthCheck();
   
-  // Show loading when checking auth status
+  // Hiển thị loading khi đang kiểm tra trạng thái đăng nhập
   if (checkingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -106,19 +103,12 @@ function App() {
     )
   }
   
-  // Return PersistGate with the router inside
-  // Using a fragment rather than a div
   return (
-    <PersistGate loading={
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Đang tải trạng thái ứng dụng...</p>
-        </div>
-      </div>
-    } persistor={persistor}>
-      <RouterProvider router={appRouter} />
-    </PersistGate>
+    <div>
+      <PersistGate loading={null} persistor={persistor}>
+        <RouterProvider router={appRouter} />
+      </PersistGate>
+    </div>
   )
 }
 

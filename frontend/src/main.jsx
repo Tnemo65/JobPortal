@@ -6,15 +6,11 @@ import { Provider } from 'react-redux'
 import store from './redux/store.js'
 import { Toaster } from './components/ui/sonner.jsx'
 
-// Create root first
-const root = ReactDOM.createRoot(document.getElementById('root'))
-
-// Then render with proper React structure
-root.render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
       <App />
       <Toaster />
     </Provider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

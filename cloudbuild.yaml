@@ -34,7 +34,7 @@ steps:
     id: 'fix-permissions'
     waitFor: ['frontend-install']
     
-  # Build frontend docker image directly (skip build step since we're using dev mode)
+  # Build frontend docker image with production build
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'frontend'
     args: ['build', '-t', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest', '.']
