@@ -198,7 +198,7 @@ export const login = async (req, res) => {
             maxAge: 1 * 24 * 60 * 60 * 1000, 
             httpOnly: true, 
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict' 
+            sameSite: 'none' // Đổi từ 'lax' sang 'none' để cho phép CORS
         }).json({
             message: `Chào mừng trở lại ${userData.fullname}`,
             user: userData,
@@ -218,7 +218,7 @@ export const logout = async (req, res) => {
             maxAge: 0,
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            sameSite: 'none'  // Đổi từ 'strict' sang 'none' để hỗ trợ CORS
         }).json({
             message: "Logged out successfully.",
             success: true
@@ -264,7 +264,7 @@ export const ssoAuthSuccess = async (req, res) => {
             maxAge: 24 * 60 * 60 * 1000, // 1 day
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' // Changed from 'strict' to allow cross-site redirects
+            sameSite: 'none' // Đổi từ 'lax' sang 'none' để cho phép CORS
         });
         
         // Redirect to frontend with token in URL query params

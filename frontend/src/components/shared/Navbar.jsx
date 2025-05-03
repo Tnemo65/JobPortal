@@ -5,10 +5,10 @@ import { Avatar, AvatarImage } from '../ui/avatar'
 import { LogOut, User2, Bell, Search, Menu, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import axios from 'axios'
 import { USER_API_END_POINT } from '@/utils/constant'
 import { setUser } from '@/redux/authSlice'
 import { toast } from 'sonner'
+import api from '@/utils/api'
 
 const Navbar = () => {
     const { user } = useSelector(store => store.auth);
@@ -37,7 +37,7 @@ const Navbar = () => {
         const fetchNotifications = async () => {
             if (!user) return;
             try {
-                const res = await axios.get(`${USER_API_END_POINT}/notifications`, { withCredentials: true });
+                const res = await api.get(`/user/notifications`);
                 if (res.data.success) setNotifications(res.data.notifications);
             } catch (err) {
                 // silent
@@ -53,7 +53,7 @@ const Navbar = () => {
             // Gọi API đánh dấu tất cả là đã đọc
             const markAllRead = async () => {
                 try {
-                    await axios.post(`${USER_API_END_POINT}/notifications/read-all`, {}, { withCredentials: true });
+                    await api.post(`/user/notifications/read-all`);
                     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
                 } catch {}
             };
@@ -65,7 +65,7 @@ const Navbar = () => {
         if (!noti.read) {
             // Gọi API đánh dấu đã đọc
             try {
-                await axios.post(`${USER_API_END_POINT}/notifications/${noti._id}/read`, {}, { withCredentials: true });
+                await api.post(`/user/notifications/${noti._id}/read`);
                 setNotifications(prev => prev.map(n => n._id === noti._id ? { ...n, read: true } : n));
             } catch {}
         }
@@ -77,10 +77,8 @@ const Navbar = () => {
 
     const logoutHandler = async () => {
         try {
-            // Sử dụng axios bình thường thay vì createSecureAxios
-            const res = await axios.get(`${USER_API_END_POINT}/logout`, {
-                withCredentials: true
-            });
+            // Sử dụng API client
+            const res = await api.get(`/user/logout`);
             
             if (res.data.success) {
                 dispatch(setUser(null));

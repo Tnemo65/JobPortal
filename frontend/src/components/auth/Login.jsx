@@ -5,7 +5,6 @@ import { Input } from '../ui/input'
 import { RadioGroup } from '../ui/radio-group'
 import { Button } from '../ui/button'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import { USER_API_END_POINT } from '@/utils/constant'
 import { toast } from 'sonner'
 import { useDispatch, useSelector } from 'react-redux'
@@ -13,6 +12,7 @@ import { setLoading, setUser } from '@/redux/authSlice'
 import { Loader2, Mail, Lock } from 'lucide-react'
 import { FaGoogle } from 'react-icons/fa'
 import { motion } from 'framer-motion'
+import api from '@/utils/api'
 
 const Login = () => {
     const [input, setInput] = useState({
@@ -25,14 +25,13 @@ const Login = () => {
     const navigate = useNavigate();
     const loadingTimeoutRef = useRef(null);
     
-    // Thêm timeout để reset trạng thái loading nếu kéo dài quá lâu
     useEffect(() => {
         if (loading) {
             loadingTimeoutRef.current = setTimeout(() => {
                 console.log("Login timeout - resetting loading state");
                 dispatch(setLoading(false));
                 toast.error("Đăng nhập mất nhiều thời gian. Vui lòng thử lại.");
-            }, 10000); // 10 giây timeout
+            }, 10000);
         } else {
             if (loadingTimeoutRef.current) {
                 clearTimeout(loadingTimeoutRef.current);
@@ -53,60 +52,31 @@ const Login = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
-        // Validate input trước khi gửi request
+
         if (!input.email || !input.password || !input.role) {
-            toast.error("Vui lòng điền đầy đủ thông tin đăng nhập");
-            return;
+            return toast.error("Vui lòng điền đầy đủ thông tin");
         }
-        
+
         try {
-            // Reset loading state trước khi bắt đầu để đảm bảo trạng thái mới
-            dispatch(setLoading(false));
             dispatch(setLoading(true));
             
-            // Đặt timeout cho request để tránh chờ quá lâu
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            
-            const res = await axios.post(`${USER_API_END_POINT}/login`, input, {
-                withCredentials: true,
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
+            const res = await api.post('/user/login', input);
             
             if (res.data.success) {
                 dispatch(setUser(res.data.user));
-                // Chuyển hướng dựa trên vai trò người dùng
-                if (res.data.user.role === 'recruiter') {
-                    navigate('/admin/companies');
-                } else {
-                    navigate('/');
-                }
-                toast.success(`Chào mừng trở lại ${res.data.user.fullname}`);
+                toast.success(res.data.message);
+                navigate("/");
             }
         } catch (error) {
-            console.error("Login error:", error);
-            if (error.name === 'AbortError') {
-                toast.error("Đăng nhập quá thời gian. Vui lòng thử lại.");
-            } else {
-                toast.error(error.response?.data?.message || "Đăng nhập thất bại");
-            }
+            console.log(error);
+            toast.error(error.response?.data?.message || "Đăng nhập thất bại");
         } finally {
             dispatch(setLoading(false));
         }
-    }
+    };
 
     const handleGoogleLogin = () => {
-        // Tạo URL đầy đủ cho endpoint đăng nhập Google
-        const apiUrl = USER_API_END_POINT.startsWith('http') 
-            ? `${USER_API_END_POINT}/auth/google` 
-            : `${window.location.origin}${USER_API_END_POINT}/auth/google`;
-            
-        console.log("Đang chuyển hướng đến Google OAuth:", apiUrl);
-        
-        // Thêm tham số để tránh cache
-        const redirectUrl = `${apiUrl}?t=${Date.now()}`;
+        const redirectUrl = `${USER_API_END_POINT}/auth/google`;
         window.location.href = redirectUrl;
     }
 

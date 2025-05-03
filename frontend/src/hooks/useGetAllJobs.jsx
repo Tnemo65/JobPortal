@@ -3,7 +3,7 @@ import { JOB_API_END_POINT } from '@/utils/constant'
 import { toast } from 'sonner'
 import { useSelector, useDispatch } from 'react-redux';
 import { setAllJobs } from '@/redux/jobSlice';
-import axios from 'axios';
+import api from '@/utils/api';
 
 const useGetAllJobs = () => {
     const [loading, setLoading] = useState(false);
@@ -20,18 +20,16 @@ const useGetAllJobs = () => {
                 if (filters[key]) queryParams.append(key, filters[key]);
             });
 
-            // Sử dụng axios bình thường thay vì createSecureAxios
-            const res = await axios.get(`${JOB_API_END_POINT}/get?${queryParams.toString()}`, {
-                withCredentials: true
-            });
+            // Sử dụng API client
+            const res = await api.get(`/job/get?${queryParams.toString()}`);
             
             if (res.data.success) {
                 setJobs(res.data.jobs);
                 dispatch(setAllJobs(res.data.jobs));
             }
         } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to get jobs");
+            console.log(error);
+            toast.error(error.response?.data?.message || "Failed to fetch jobs");
         } finally {
             setLoading(false);
         }
@@ -41,8 +39,8 @@ const useGetAllJobs = () => {
         getAllJobs();
     }, []);
 
-    return { 
-        loading, 
+    return {
+        loading,
         jobs,
         getAllJobs
     };

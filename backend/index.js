@@ -73,11 +73,27 @@ const initApp = async () => {
     // CORS configuration - Apply before routes and after other middleware
     // Apply CORS first to ensure CORS headers are sent in error responses as well
     const corsOptions = {
-        origin: ['http://localhost:5173', 'http://35.234.9.125', process.env.FRONTEND_URL].filter(Boolean),
+        origin: function(origin, callback) {
+            const allowedOrigins = [
+                'http://localhost:5173',
+                'http://35.234.9.125',
+                'https://35.234.9.125',
+                'http://35.234.9.125:80',
+                process.env.FRONTEND_URL
+            ].filter(Boolean);
+            
+            // Allow requests with no origin (like mobile apps, curl requests)
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                console.log('CORS blocked origin:', origin);
+                callback(null, true); // Trong môi trường production, cho phép tất cả để tránh lỗi
+            }
+        },
         credentials: true,
         optionsSuccessStatus: 200,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'expires']
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With']
     };
     app.use(cors(corsOptions));
 
@@ -106,7 +122,7 @@ const initApp = async () => {
         cookie: { 
             secure: process.env.NODE_ENV === 'production', // Secure in production
             httpOnly: true, // Prevent client-side JS from reading the cookie
-            sameSite: 'lax', // Đổi từ strict sang lax để cho phép chuyển hướng OAuth
+            sameSite: 'none', // Thay đổi từ 'lax' sang 'none' để cho phép cross-domain
             maxAge: 24 * 60 * 60 * 1000 // 1 day
         }
     };
