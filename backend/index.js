@@ -184,6 +184,15 @@ const initApp = async () => {
       });
     });
 
+    // Root route handler to prevent 404 errors on direct IP access
+    app.get('/', (req, res) => {
+      res.status(200).json({
+        message: 'Job Portal API is running',
+        docs: '/api/v1',
+        health: '/health'
+      });
+    });
+
     // api's routes
     app.use("/api/v1/user", userRoute);
     app.use("/api/v1/company", companyRoute);
