@@ -153,6 +153,67 @@ frontend/
 └── index.html           # HTML entry point
 ```
 
+## 🚢 Triển khai với GKE và ArgoCD
+
+### 1. Chuẩn bị môi trường
+
+- Tạo một cluster GKE trong Google Cloud Console
+- Cài đặt và cấu hình `kubectl` và `gcloud` trên máy tính của bạn
+- Cài đặt ArgoCD vào cluster
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+### 2. Thiết lập Kubernetes Manifest
+
+Dự án đã có sẵn các file manifest cho Kubernetes:
+- `backend-deployment.yaml`, `backend-service.yaml`, `backend-hpa.yaml` cho backend
+- `frontend-deployment.yaml`, `frontend-service.yaml`, `frontend-hpa.yaml` cho frontend
+- `redis.yaml` cho Redis cache
+- `app-secrets.yaml` cho các biến môi trường nhạy cảm
+
+### 3. Xây dựng và đẩy Docker Images
+
+Sử dụng Cloud Build để tự động xây dựng và đẩy Docker images lên Google Container Registry:
+
+```bash
+gcloud builds submit --config=cloudbuild.yaml
+```
+
+### 4. Triển khai ứng dụng với ArgoCD
+
+- Truy cập giao diện ArgoCD
+- Tạo một ứng dụng mới, trỏ đến repository Git của bạn
+- Chỉ định đường dẫn đến thư mục chứa các file Kubernetes manifest
+- Đồng bộ hóa ứng dụng
+
+### 5. Cấu hình biến môi trường
+
+Xem file `app-secrets.yaml` để cấu hình các biến môi trường cần thiết như:
+- MongoDB URI
+- Google OAuth credentials
+- Cloudinary credentials
+- Redis URL
+- Base URL và Frontend URL
+
+### 6. Kiểm tra triển khai
+
+Kiểm tra xem tất cả các pod đã sẵn sàng:
+
+```bash
+kubectl get pods
+```
+
+Lấy URL truy cập từ Ingress hoặc Service:
+
+```bash
+kubectl get ingress
+# hoặc
+kubectl get svc
+```
+
 ## 📷 Ảnh chụp màn hình
 
 <details>
