@@ -11,8 +11,8 @@ import { toast } from 'sonner'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoading, setUser } from '@/redux/authSlice'
 import { Loader2, Mail, Lock } from 'lucide-react'
-import { FaGoogle } from 'react-icons/fa'
 import { motion } from 'framer-motion'
+import GoogleLoginButton from './GoogleLoginButton'
 
 const Login = () => {
     const [input, setInput] = useState({
@@ -97,19 +97,6 @@ const Login = () => {
         }
     }
 
-    const handleGoogleLogin = () => {
-        // Tạo URL đầy đủ cho endpoint đăng nhập Google
-        const apiUrl = USER_API_END_POINT.startsWith('http') 
-            ? `${USER_API_END_POINT}/auth/google` 
-            : `${window.location.origin}${USER_API_END_POINT}/auth/google`;
-            
-        console.log("Đang chuyển hướng đến Google OAuth:", apiUrl);
-        
-        // Thêm tham số để tránh cache
-        const redirectUrl = `${apiUrl}?t=${Date.now()}`;
-        window.location.href = redirectUrl;
-    }
-
     useEffect(() => {
         if (user) {
             navigate("/");
@@ -135,14 +122,7 @@ const Login = () => {
                             
                             <form onSubmit={submitHandler}>
                                 <div className="mb-6">
-                                    <Button 
-                                        type="button"
-                                        onClick={handleGoogleLogin}
-                                        className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg p-2.5 transition-all duration-200 hover:shadow-md"
-                                    >
-                                        <FaGoogle className="text-red-500 h-5 w-5" />
-                                        <span>Sign in with Google</span>
-                                    </Button>
+                                    <GoogleLoginButton className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300" />
                                 </div>
                                 
                                 <div className="relative my-6">

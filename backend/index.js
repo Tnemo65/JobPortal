@@ -73,7 +73,7 @@ const initApp = async () => {
     // CORS configuration - Apply before routes and after other middleware
     // Apply CORS first to ensure CORS headers are sent in error responses as well
     const corsOptions = {
-        origin: ['http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
+        origin: ['http://localhost:5173', 'http://localhost:3000', 'https://localhost:3000', process.env.FRONTEND_URL, 'http://35.234.9.125', 'https://35.234.9.125'].filter(Boolean),
         credentials: true,
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
