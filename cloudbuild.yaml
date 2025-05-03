@@ -46,9 +46,10 @@ steps:
     args: ['push', 'gcr.io/empyrean-harbor-456906-s2/frontend:latest']
     id: 'frontend-push'
     waitFor: ['frontend-docker-build']
+    
 
   # Add version tag to image for Argo CD detection
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk' 
     entrypoint: 'bash'
     args:
       - '-c'
