@@ -1,6 +1,6 @@
 // Production vs Development API endpoints
 const API_BASE = import.meta.env.PROD 
-  ? (window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '') + '/api/v1')
+  ? "http://34.81.121.101/api/v1"  // Backend load balancer URL
   : "http://localhost:8080/api/v1";
 
 export const USER_API_END_POINT = `${API_BASE}/user`;

@@ -34,10 +34,11 @@ spec:
             - name: PORT
               value: "3000"
             - name: VITE_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: FRONTEND_URL
+              value: "http://34.81.121.101/api/v1"
+            - name: VITE_BACKEND_URL
+              value: "http://34.81.121.101"
+            - name: NODE_ENV
+              value: "production"
           readinessProbe:
             httpGet:
               path: /
