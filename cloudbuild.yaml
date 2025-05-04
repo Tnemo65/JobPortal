@@ -47,7 +47,6 @@ steps:
     id: 'frontend-push'
     waitFor: ['frontend-docker-build']
     
-
   # Add version tag to image for Argo CD detection
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk' 
     entrypoint: 'bash'
@@ -60,6 +59,39 @@ steps:
         docker push gcr.io/empyrean-harbor-456906-s2/frontend:$BUILD_ID
     id: 'tag-images'
     waitFor: ['backend-push', 'frontend-push']
+
+  # Update image tag in deployment yaml (ví dụ: k8s/deployment.yaml)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        sed -i "s|gcr.io/empyrean-harbor-456906-s2/backend:.*|gcr.io/empyrean-harbor-456906-s2/backend:${BUILD_ID}|g" k8s/deployment.yaml
+        sed -i "s|gcr.io/empyrean-harbor-456906-s2/frontend:.*|gcr.io/empyrean-harbor-456906-s2/frontend:${BUILD_ID}|g" k8s/deployment.yaml
+    id: 'update-yaml'
+    waitFor: ['tag-images']
+
+  # Commit & push yaml lên repo (cần cấu hình git credential phù hợp)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    env:
+      - 'GIT_COMMITTER_NAME=cloudbuild'
+      - 'GIT_COMMITTER_EMAIL=cloudbuild@example.com'
+      # Nếu dùng token, thêm vào biến môi trường như sau:
+      # - 'GIT_TOKEN=ghp_xxx'
+    args:
+      - '-c'
+      - |
+        git config --global user.email "cloudbuild@example.com"
+        git config --global user.name "cloudbuild"
+        git add k8s/deployment.yaml
+        git commit -m "Update image to ${BUILD_ID} [CI]"
+        # Nếu dùng HTTPS + token:
+        # git push https://<token>@github.com/<user>/<repo>.git HEAD:main
+        # Nếu dùng SSH key (đã cấu hình trước):
+        git push origin main
+    id: 'git-commit'
+    waitFor: ['update-yaml']
 
 images:
   - 'gcr.io/empyrean-harbor-456906-s2/backend:latest'
