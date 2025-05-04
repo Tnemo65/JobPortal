@@ -78,10 +78,6 @@ steps:
     args:
       - '-c'
       - |
-        # Clone repo (if running outside repo dir)
-        # git clone https://github.com/Tnemo65/JobPortal.git
-        # cd JobPortal
-
         # Configure git credentials
         git config --global user.email "cloudbuild@example.com"
         git config --global user.name "Cloud Build"
@@ -90,11 +86,11 @@ steps:
         git config --global credential.helper "store --file /tmp/git-credentials"
         echo "https://oauth2:$$GITHUB_TOKEN@github.com" > /tmp/git-credentials
         
-        # Ensure up-to-date main branch
-        git checkout main
+        # Ensure we're on the main branch
+        git fetch origin main
+        git checkout -B main origin/main
         git pull origin main
-
-         
+        
         # Stage, commit, and push changes
         git add backend-deployment.yaml frontend-deployment.yaml
         git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
