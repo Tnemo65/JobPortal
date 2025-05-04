@@ -14,7 +14,10 @@ const router = express.Router();
 // Regular authentication routes - với rate limiting chống brute force
 router.route("/register").post(authLimiter, singleUpload, strongPasswordCheck, register);
 router.route("/login").post(authLimiter, login);
-router.route("/logout").get(logout);
+// Update logout route to support both GET and POST
+router.route("/logout")
+    .get(logout)
+    .post(logout);
 router.route("/profile/update").post(isAuthenticated, multiFieldUpload, updateProfile);
 
 // Middleware debug đặc biệt cho OAuth routes
