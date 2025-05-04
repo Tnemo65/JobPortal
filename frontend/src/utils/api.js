@@ -13,6 +13,12 @@ const api = axios.create({
 // Thêm interceptor request để xử lý trước khi gửi request
 api.interceptors.request.use(
   (config) => {
+    // Thêm token vào header nếu có trong localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     // Thêm cache control header nếu cần
     if (config.bypassCache) {
       config.headers = {
@@ -34,8 +40,7 @@ api.interceptors.response.use(
   async (error) => {
     // Xử lý lỗi authentication (401)
     if (error.response && error.response.status === 401) {
-      // Có thể thêm logic xử lý token hết hạn ở đây nếu cần
-      console.log('Authentication error:', error.response.data.code);
+      console.log('Authentication error:', error.response?.data?.message || 'Session expired');
       
       // Nếu lỗi TOKEN_EXPIRED hoặc INVALID_TOKEN, redirect về trang login
       const errorCode = error.response.data.code;

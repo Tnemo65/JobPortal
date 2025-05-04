@@ -219,7 +219,8 @@ export const logout = async (req, res) => {
             maxAge: 0,
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none'  // Đổi từ 'strict' sang 'none' để hỗ trợ CORS
+            sameSite: 'none',  // Đặt sameSite thành 'none' để hỗ trợ CORS
+            path: '/'
         }).json({
             message: "Logged out successfully.",
             success: true

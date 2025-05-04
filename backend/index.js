@@ -18,16 +18,15 @@ import sanitizeMiddleware from "./utils/sanitizer.js";
 import { redisClient, isRedisReady } from "./utils/redis-cache.js";
 import { createClient } from "redis";
 import { RedisStore } from "connect-redis";
+// Import file cấu hình môi trường
+import { setupEnvironment } from './config/env.js';
 
 dotenv.config({});
 
-const app = express();
+// Thiết lập môi trường cho GKE trước khi khởi tạo ứng dụng
+setupEnvironment();
 
-// Force set NODE_ENV to production when running on GKE
-if (process.env.KUBERNETES_SERVICE_HOST) {
-    console.log("Running in Kubernetes environment - forcing production mode");
-    process.env.NODE_ENV = 'production';
-}
+const app = express();
 
 // Initialize app and DB connection without session configuration first
 const initApp = async () => {
@@ -113,7 +112,7 @@ const initApp = async () => {
                 scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
                 imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-                connectSrc: ["'self'", "https://*.googleapis.com"],
+                connectSrc: ["'self'", "https://*.googleapis.com", process.env.FRONTEND_URL, process.env.BACKEND_URL],
                 frameSrc: ["'self'", "https://accounts.google.com"],
                 formAction: ["'self'", "https://accounts.google.com"],
                 frameAncestors: ["'none'"],
