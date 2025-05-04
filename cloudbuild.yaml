@@ -72,30 +72,28 @@ steps:
     waitFor: ['tag-images']
 
     # Git operations with correct secret syntax
+    # Git operations with correct secret syntax
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        # Tạo thư mục để lưu các file
-        BUILD_DIR="builds/$BUILD_ID"
-        
         # Lưu các file YAML đã cập nhật vào Cloud Storage
         echo "Đang lưu các file triển khai đã cập nhật với tag ${BUILD_ID}"
-        gsutil cp backend-deployment.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/backend-deployment.yaml
-        gsutil cp frontend-deployment.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/frontend-deployment.yaml
+        gsutil cp backend-deployment.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/backend-deployment.yaml
+        gsutil cp frontend-deployment.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/frontend-deployment.yaml
         
         # Lưu thêm các file quan trọng khác (nếu cần)
-        gsutil cp backend-service.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/backend-service.yaml || echo "Không tìm thấy backend-service.yaml"
-        gsutil cp frontend-service.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/frontend-service.yaml || echo "Không tìm thấy frontend-service.yaml"
+        gsutil cp backend-service.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/backend-service.yaml || echo "Không tìm thấy backend-service.yaml"
+        gsutil cp frontend-service.yaml gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/frontend-service.yaml || echo "Không tìm thấy frontend-service.yaml"
         
         # Tạo file log chứa thông tin build
         echo "Build ID: $BUILD_ID" > build-info.txt
         echo "Thời gian: $(date)" >> build-info.txt
         echo "Project: empyrean-harbor-456906-s2" >> build-info.txt
-        gsutil cp build-info.txt gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/build-info.txt
+        gsutil cp build-info.txt gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/build-info.txt
         
-        echo "Các file đã được lưu vào gs://empyrean-harbor-456906-s2_cloudbuild/source/$BUILD_DIR/"
+        echo "Các file đã được lưu vào gs://empyrean-harbor-456906-s2_cloudbuild/source/builds/$BUILD_ID/"
         
         # In nội dung các file để dễ theo dõi trong log
         echo "=== Nội dung file backend-deployment.yaml ==="
