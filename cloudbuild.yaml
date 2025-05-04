@@ -93,8 +93,8 @@ steps:
         # Ensure up-to-date main branch
         git checkout main
         git pull origin main
-        
-        
+
+         
         # Stage, commit, and push changes
         git add backend-deployment.yaml frontend-deployment.yaml
         git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
