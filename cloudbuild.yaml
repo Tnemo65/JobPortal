@@ -71,34 +71,43 @@ steps:
     id: 'update-yaml'
     waitFor: ['tag-images']
 
-  # Commit and push changes to GitHub
   - name: 'gcr.io/cloud-builders/git'
     entrypoint: 'bash'
     secretEnv: ['GITHUB_TOKEN']
     args:
       - '-c'
       - |
-        # Configure git credentials
+        # Hiển thị chi tiết lỗi
+        set -ex
+        
+        # Configure git
         git config --global user.email "cloudbuild@example.com"
         git config --global user.name "Cloud Build"
         
-        # Setup authentication for GitHub - FIX HERE
-        git config --global credential.helper store
-        echo "https://Tnemo65:$$GITHUB_TOKEN@github.com" > ~/.git-credentials
+        # Kiểm tra token (in ra 5 ký tự đầu để debug)
+        echo "Token prefix: $${GITHUB_TOKEN:0:5}..."
         
-        # Clone repository with token
-        git clone https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git repo
+        # Setup authentication
+        echo "https://Tnemo65:$$GITHUB_TOKEN@github.com" > ~/.git-credentials
+        git config --global credential.helper 'store --file ~/.git-credentials'
+        
+        # Kiểm tra nếu tệp deployment tồn tại
+        ls -la
+        
+        # Clone repository
+        git clone https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git repo || exit 1
         
         # Copy deployment files
-        cp backend-deployment.yaml frontend-deployment.yaml repo/
+        cp backend-deployment.yaml frontend-deployment.yaml repo/ || echo "Failed to copy files"
         cd repo
         
         # Stage, commit, and push changes
-        git add backend-deployment.yaml frontend-deployment.yaml
+        git add backend-deployment.yaml frontend-deployment.yaml || echo "Failed to add files"
         git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
-        git push https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git main
+        git push || echo "Failed to push changes"
     id: 'commit-and-push'
     waitFor: ['update-yaml']
+
 
 
   # This step will only run if the previous step fails (e.g., authentication issues)
