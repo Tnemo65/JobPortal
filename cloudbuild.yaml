@@ -71,6 +71,7 @@ steps:
     id: 'update-yaml'
     waitFor: ['tag-images']
 
+
   - name: 'gcr.io/cloud-builders/git'
     entrypoint: 'bash'
     secretEnv: ['GITHUB_TOKEN']
