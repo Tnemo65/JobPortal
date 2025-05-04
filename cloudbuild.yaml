@@ -83,13 +83,13 @@ steps:
         git config --global user.name "Cloud Build"
         
         # Setup authentication for GitHub
-        git config --global credential.helper "store --file /tmp/git-credentials"
+        git config --global credential.helper 'store --file /tmp/git-credentials'
         echo "https://oauth2:$$GITHUB_TOKEN@github.com" > /tmp/git-credentials
         
-        # Ensure we're on the main branch
-        git fetch origin main
-        git checkout -B main origin/main
-        git pull origin main
+        # Clone repository
+        git clone https://github.com/Tnemo65/JobPortal.git repo
+        cp backend-deployment.yaml frontend-deployment.yaml repo/
+        cd repo
         
         # Stage, commit, and push changes
         git add backend-deployment.yaml frontend-deployment.yaml
