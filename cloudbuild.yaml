@@ -84,8 +84,10 @@ steps:
       - |
         git config --global user.email "cloudbuild@example.com"
         git config --global user.name "cloudbuild"
+        # Đảm bảo đang trên branch main hoặc tạo branch main nếu chưa có
+        git checkout main || git checkout -b main
         git add backend-deployment.yaml frontend-deployment.yaml
-        git commit -m "Update image to ${BUILD_ID} [CI]"
+        git commit -m "Update image to ${BUILD_ID} [CI]" || echo "No changes to commit"
         # Nếu dùng HTTPS + token:
         # git push https://<token>@github.com/<user>/<repo>.git HEAD:main
         # Nếu dùng SSH key (đã cấu hình trước):
