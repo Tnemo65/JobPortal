@@ -71,19 +71,45 @@ steps:
     id: 'update-yaml'
     waitFor: ['tag-images']
 
-  # Update yaml only without pushing to GitHub
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  # Commit and push changes to GitHub
+  - name: 'gcr.io/cloud-builders/git'
     entrypoint: 'bash'
-    env:
-      - 'GIT_COMMITTER_EMAIL=cloudbuild@example.com'
-      # Nếu dùng token, thêm vào biến môi trường như sau:
-      # - 'GIT_TOKEN=ghp_xxx'
+    secretEnv: ['GITHUB_TOKEN']
     args:
       - '-c'
       - |
-        # Chỉ cập nhật file yaml mà không push lên GitHub
+        # Clone repo (if running outside repo dir)
+        # git clone https://github.com/Tnemo65/JobPortal.git
+        # cd JobPortal
+
+        # Configure git credentials
+        git config --global user.email "cloudbuild@example.com"
+        git config --global user.name "Cloud Build"
+        
+        # Setup authentication for GitHub
+        git config --global credential.helper "store --file /tmp/git-credentials"
+        echo "https://oauth2:${GITHUB_TOKEN}@github.com" > /tmp/git-credentials
+        
+        # Ensure up-to-date main branch
+        git checkout main
+        git pull origin main
+        
+        # Stage, commit, and push changes
+        git add backend-deployment.yaml frontend-deployment.yaml
+        git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
+        git push origin main
+    id: 'commit-and-push'
+    waitFor: ['update-yaml']
+
+  # This step will only run if the previous step fails (e.g., authentication issues)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Failed to commit changes to GitHub. Please check your authentication credentials."
         echo "Image tags updated to ${BUILD_ID} in deployment files."
-        echo "Please commit and push these changes manually."
+        echo "Please commit and push these changes manually if needed."
     id: 'update-yaml-only'
     waitFor: ['update-yaml']
 
@@ -92,6 +118,11 @@ images:
   - 'gcr.io/empyrean-harbor-456906-s2/frontend:latest'
   - 'gcr.io/empyrean-harbor-456906-s2/backend:$BUILD_ID'
   - 'gcr.io/empyrean-harbor-456906-s2/frontend:$BUILD_ID'
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/empyrean-harbor-456906-s2/secrets/github-token/versions/latest
+      env: 'GITHUB_TOKEN'
 
 timeout: 1800s
 options:
