@@ -198,7 +198,8 @@ export const login = async (req, res) => {
             maxAge: 1 * 24 * 60 * 60 * 1000, 
             httpOnly: true, 
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none' // Đổi từ 'lax' sang 'none' để cho phép CORS
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
         }).json({
             message: `Chào mừng trở lại ${userData.fullname}`,
             user: userData,
@@ -261,10 +262,11 @@ export const ssoAuthSuccess = async (req, res) => {
 
         // Set the token in a cookie
         res.cookie("token", token, { 
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none' // Đổi từ 'lax' sang 'none' để cho phép CORS
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/',
+            domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let the browser set the appropriate domain
         });
         
         // Redirect to frontend with token in URL query params

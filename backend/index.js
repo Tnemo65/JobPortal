@@ -23,8 +23,83 @@ dotenv.config({});
 
 const app = express();
 
+// Force set NODE_ENV to production when running on GKE
+if (process.env.KUBERNETES_SERVICE_HOST) {
+    console.log("Running in Kubernetes environment - forcing production mode");
+    process.env.NODE_ENV = 'production';
+}
+
 // Initialize app and DB connection without session configuration first
 const initApp = async () => {
+    console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+    console.log(`Backend URL: ${process.env.BACKEND_URL || 'http://localhost:3000'}`);
+
+    // Configure CORS first - before ANY other middleware
+    const corsOptions = {
+        origin: function(origin, callback) {
+            // Create a list of allowed origins
+            const allowedOrigins = [
+                'http://localhost:5173',
+                'http://localhost:3000',
+                'http://localhost:8000',
+                'http://localhost',
+                'http://35.234.9.125:80',
+                'http://35.234.9.125:5173',
+                'http://35.234.9.125',  // Frontend URL without port
+                'http://34.81.121.101', // Backend URL
+                'https://34.81.121.101',
+                process.env.FRONTEND_URL,
+                process.env.BACKEND_URL
+            ].filter(Boolean);
+            
+            console.log('CORS Request from origin:', origin);
+            
+            // For debugging in GKE, temporarily allow all origins
+            if (process.env.NODE_ENV === 'production' || process.env.KUBERNETES_SERVICE_HOST) {
+                console.log('Running in production/GKE - allowing all origins temporarily for debugging');
+                callback(null, true);
+                return;
+            }
+            
+            // Allow requests with no origin (like mobile apps or curl)
+            if (!origin) {
+                console.log('Request with no origin - allowing');
+                callback(null, true);
+                return;
+            }
+            
+            if (allowedOrigins.includes(origin)) {
+                console.log('Origin in allowed list - allowing:', origin);
+                callback(null, true);
+            } else {
+                if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+                    console.log('Localhost origin - allowing:', origin);
+                    callback(null, true);
+                    return;
+                }
+                
+                console.log('CORS would normally block origin:', origin);
+                // Allow all origins temporarily for debugging
+                callback(null, true); 
+            }
+        },
+        credentials: true,
+        optionsSuccessStatus: 200,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With'],
+        maxAge: 86400 // 24 hours in seconds - Increase cache time for OPTIONS requests
+    };
+    
+    // Apply CORS to all routes BEFORE any other middleware
+    app.use(cors(corsOptions));
+    
+    // Add explicit OPTIONS handler to respond immediately to preflight requests
+    app.options('*', (req, res) => {
+        console.log('Received OPTIONS request for:', req.originalUrl);
+        res.status(200).end();
+    });
+    
     // Khởi tạo cache middleware
     let cache = apicache.middleware;
 
@@ -70,32 +145,17 @@ const initApp = async () => {
         sanitizeMiddleware(req, res, next);
     });
 
-    // CORS configuration - Apply before routes and after other middleware
-    // Apply CORS first to ensure CORS headers are sent in error responses as well
-    const corsOptions = {
-        origin: function(origin, callback) {
-            const allowedOrigins = [
-                'http://localhost:5173',
-                'http://35.234.9.125',
-                'https://35.234.9.125',
-                'http://35.234.9.125:80',
-                process.env.FRONTEND_URL
-            ].filter(Boolean);
-            
-            // Allow requests with no origin (like mobile apps, curl requests)
-            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                callback(null, true);
-            } else {
-                console.log('CORS blocked origin:', origin);
-                callback(null, true); // Trong môi trường production, cho phép tất cả để tránh lỗi
-            }
-        },
-        credentials: true,
-        optionsSuccessStatus: 200,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With']
-    };
-    app.use(cors(corsOptions));
+    // Add CORS error handler AFTER applying CORS middleware
+    app.use((err, req, res, next) => {
+        if (err.message === 'Not allowed by CORS') {
+            console.error('CORS Error:', err);
+            return res.status(403).json({
+                message: 'CORS not allowed from this origin',
+                success: false
+            });
+        }
+        next(err);
+    });
 
     // Apply basic rate limiter with less restrictive settings during development
     const isProduction = process.env.NODE_ENV === 'production';
@@ -122,7 +182,7 @@ const initApp = async () => {
         cookie: { 
             secure: process.env.NODE_ENV === 'production', // Secure in production
             httpOnly: true, // Prevent client-side JS from reading the cookie
-            sameSite: 'none', // Thay đổi từ 'lax' sang 'none' để cho phép cross-domain
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Cross-domain in production, stricter in dev
             maxAge: 24 * 60 * 60 * 1000 // 1 day
         }
     };
@@ -214,6 +274,18 @@ const initApp = async () => {
     app.use("/api/v1/company", companyRoute);
     app.use("/api/v1/job", jobRoute);
     app.use("/api/v1/application", applicationRoute);
+
+    // Add a final catch-all CORS handler for any routes that might be missed
+    app.use('*', (req, res, next) => {
+        res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+        res.header("Access-Control-Allow-Credentials", "true");
+        res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
+        res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Cache-Control,Pragma,Expires,X-Requested-With");
+        if (req.method === 'OPTIONS') {
+            return res.status(200).end();
+        }
+        next();
+    });
 
     // Error handler middleware - xử lý lỗi tập trung
     app.use((err, req, res, next) => {

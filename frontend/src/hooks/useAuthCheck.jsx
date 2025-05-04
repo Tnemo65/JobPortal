@@ -14,6 +14,27 @@ const useAuthCheck = () => {
     const dispatch = useDispatch();
 
     useEffect(() => {
+        const clearSession = async () => {
+            try {
+                // Gọi API logout để xóa cookie/session phía backend
+                await axios.post(`${USER_API_END_POINT}/logout`, {}, { withCredentials: true });
+            } catch (e) {
+                // Không cần xử lý lỗi logout
+            }
+            // Xóa token/user ở localStorage
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            // Reset redux user về null
+            dispatch(setUser(null));
+        };
+
+        // Luôn xóa phiên đăng nhập cũ khi app khởi động
+        clearSession().finally(() => {
+            setCheckingAuth(false);
+        });
+    }, []);
+
+    useEffect(() => {
         const verifyAuth = async () => {
             // Nếu đã có user trong Redux store thì không cần kiểm tra nữa
             // Chỉ kiểm tra khi refresh trang mà không có user trong Redux
