@@ -82,21 +82,24 @@ steps:
         git config --global user.email "cloudbuild@example.com"
         git config --global user.name "Cloud Build"
         
-        # Setup authentication for GitHub
-        git config --global credential.helper 'store --file /tmp/git-credentials'
-        echo "https://oauth2:$$GITHUB_TOKEN@github.com" > /tmp/git-credentials
+        # Setup authentication for GitHub - FIX HERE
+        git config --global credential.helper store
+        echo "https://Tnemo65:$$GITHUB_TOKEN@github.com" > ~/.git-credentials
         
-        # Clone repository
-        git clone https://github.com/Tnemo65/JobPortal.git repo
+        # Clone repository with token
+        git clone https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git repo
+        
+        # Copy deployment files
         cp backend-deployment.yaml frontend-deployment.yaml repo/
         cd repo
         
         # Stage, commit, and push changes
         git add backend-deployment.yaml frontend-deployment.yaml
         git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
-        git push origin main
+        git push https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git main
     id: 'commit-and-push'
     waitFor: ['update-yaml']
+
 
   # This step will only run if the previous step fails (e.g., authentication issues)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
