@@ -88,7 +88,7 @@ steps:
         
         # Setup authentication for GitHub
         git config --global credential.helper "store --file /tmp/git-credentials"
-        echo "https://oauth2:${GITHUB_TOKEN}@github.com" > /tmp/git-credentials
+        echo "https://oauth2:$$GITHUB_TOKEN@github.com" > /tmp/git-credentials
         
         # Ensure up-to-date main branch
         git checkout main
