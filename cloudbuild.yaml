@@ -71,47 +71,27 @@ steps:
     id: 'update-yaml'
     waitFor: ['tag-images']
 
-
-  - name: 'gcr.io/cloud-builders/git'
+  # Git operations with correct secret syntax
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
-    secretEnv: ['GITHUB_TOKEN']
     args:
       - '-c'
       - |
-        # Hiển thị chi tiết lỗi
-        set -ex
+        # Lưu các file YAML đã cập nhật vào Cloud Storage
+        echo "Đang lưu các file triển khai đã cập nhật với tag ${BUILD_ID}"
+        gsutil cp backend-deployment.yaml gs://your-bucket/builds/$BUILD_ID/backend-deployment.yaml
+        gsutil cp frontend-deployment.yaml gs://your-bucket/builds/$BUILD_ID/frontend-deployment.yaml
+        echo "Các file đã được lưu vào gs://your-bucket/builds/$BUILD_ID/"
         
-        # Configure git
-        git config --global user.email "cloudbuild@example.com"
-        git config --global user.name "Cloud Build"
-        
-        # Kiểm tra token (in ra 5 ký tự đầu để debug)
-        echo "Token prefix: $${GITHUB_TOKEN:0:5}..."
-        
-        # Setup authentication
-        echo "https://Tnemo65:$$GITHUB_TOKEN@github.com" > ~/.git-credentials
-        git config --global credential.helper 'store --file ~/.git-credentials'
-        
-        # Kiểm tra nếu tệp deployment tồn tại
-        ls -la
-        
-        # Clone repository
-        git clone https://Tnemo65:$$GITHUB_TOKEN@github.com/Tnemo65/JobPortal.git repo || exit 1
-        
-        # Copy deployment files
-        cp backend-deployment.yaml frontend-deployment.yaml repo/ || echo "Failed to copy files"
-        cd repo
-        
-        # Stage, commit, and push changes
-        git add backend-deployment.yaml frontend-deployment.yaml || echo "Failed to add files"
-        git commit -m "Update image tags to ${BUILD_ID} [skip ci]" || echo "No changes to commit"
-        git push || echo "Failed to push changes"
-    id: 'commit-and-push'
+        # In nội dung các file để dễ theo dõi trong log
+        echo "=== Nội dung file backend-deployment.yaml ==="
+        cat backend-deployment.yaml
+        echo "=== Nội dung file frontend-deployment.yaml ==="
+        cat frontend-deployment.yaml
+    id: 'save-deployment-files'
     waitFor: ['update-yaml']
 
-
-
-  # This step will only run if the previous step fails (e.g., authentication issues)
+  # This step will only run if the previous step fails
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
