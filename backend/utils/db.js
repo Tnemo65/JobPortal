@@ -4,17 +4,6 @@ const connectDB = async () => {
     try {
         console.log('Attempting to connect to MongoDB...');
         
-        // Log a safe version of the MongoDB URI for debugging
-        const mongoUri = process.env.MONGO_URI || '';
-        const redactedUri = mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//[USERNAME]:[REDACTED]@');
-        console.log('MongoDB URI format:', redactedUri);
-        
-        // Check if the URI starts with the correct prefix
-        if (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://')) {
-            console.error('Invalid MongoDB URI format. URI must start with "mongodb://" or "mongodb+srv://"');
-            console.log('URI prefix:', mongoUri.substring(0, 12) + '...');
-        }
-        
         // Add connection options to handle retries and timeouts better
         await mongoose.connect(process.env.MONGO_URI, {
             serverSelectionTimeoutMS: 5000,

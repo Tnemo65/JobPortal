@@ -41,12 +41,16 @@ const SSOCallback = () => {
                     // Sử dụng token từ URL nếu có
                     if (token) {
                         localStorage.setItem('token', token);
+                        console.log('Token saved from URL params:', token.substring(0, 10) + '...');
                     }
                     
                     // Gọi API để lấy thông tin người dùng
                     const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
                         withCredentials: true,
-                        signal: controller.signal
+                        // signal: controller.signal
+                        headers: {
+                            Authorization: `Bearer ${token || localStorage.getItem('token')}`
+                        }
                     });
                     
                     clearTimeout(requestTimeoutRef.current);

@@ -12,7 +12,7 @@ export const setupGKEEnvironment = () => {
     
     // Set default URLs if not provided
     if (!process.env.FRONTEND_URL) {
-      process.env.FRONTEND_URL = 'http://35.234.9.125';
+      process.env.FRONTEND_URL = 'http://jobmarket.fun';
       console.log(`Set default FRONTEND_URL: ${process.env.FRONTEND_URL}`);
     }
     

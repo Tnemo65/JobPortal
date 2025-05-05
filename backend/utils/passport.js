@@ -25,7 +25,6 @@ passport.use(new GoogleStrategy({
     scope: ['profile', 'email'],
     prompt: 'select_account', // Luôn hiển thị màn hình chọn tài khoản
     proxy: true, // Hỗ trợ cho cấu hình proxy nếu cần
-    // Tắt việc tự động chuyển đổi chuỗi tham số trong URL
     passReqToCallback: true, // Sẽ truyền req object vào callback
     userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
 }, async (req, accessToken, refreshToken, profile, done) => {

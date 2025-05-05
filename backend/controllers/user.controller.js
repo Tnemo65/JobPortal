@@ -198,7 +198,8 @@ export const login = async (req, res) => {
             maxAge: 1 * 24 * 60 * 60 * 1000, 
             httpOnly: true, 
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: 'none',
+            // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             path: '/'
         }).json({
             message: `Chào mừng trở lại ${userData.fullname}`,
@@ -219,8 +220,7 @@ export const logout = async (req, res) => {
             maxAge: 0,
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none',  // Đặt sameSite thành 'none' để hỗ trợ CORS
-            path: '/'
+            sameSite: 'none'  // Đổi từ 'strict' sang 'none' để hỗ trợ CORS
         }).json({
             message: "Logged out successfully.",
             success: true
@@ -265,14 +265,16 @@ export const ssoAuthSuccess = async (req, res) => {
         res.cookie("token", token, { 
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            sameSite: 'none',
             path: '/',
             domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let the browser set the appropriate domain
         });
         
         // Redirect to frontend with token in URL query params
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-        res.redirect(`${frontendURL}/sso-callback?success=true&token=${token}`);
+        // res.redirect(`${frontendURL}/sso-callback?success=true&token=${token}`);
+        const redirectURL = `${frontendURL}/sso-callback?success=true&token=${encodeURIComponent(token)}`;
     } catch (error) {
         console.error('SSO auth success error:', error);
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -292,7 +294,9 @@ export const getSsoProfile = async (req, res) => {
     try {
         const userId = req.id; // From isAuthenticated middleware
         console.log('Getting SSO profile for user ID:', userId);
-        
+        console.log('Request headers:', req.headers);
+        console.log('Auth header:', req.headers.authorization);
+        console.log('Cookies:', req.cookies);
         const user = await User.findById(userId);
         if (!user) {
             console.error('User not found for ID:', userId);

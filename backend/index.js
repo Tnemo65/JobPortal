@@ -18,21 +18,22 @@ import sanitizeMiddleware from "./utils/sanitizer.js";
 import { redisClient, isRedisReady } from "./utils/redis-cache.js";
 import { createClient } from "redis";
 import { RedisStore } from "connect-redis";
-// Import file cấu hình môi trường
-import { setupEnvironment } from './config/env.js';
-
+import testRoutes from "./routes/test-routes.js";
 dotenv.config({});
 
-// Thiết lập môi trường cho GKE trước khi khởi tạo ứng dụng
-setupEnvironment();
-
 const app = express();
+
+// Force set NODE_ENV to production when running on GKE
+if (process.env.KUBERNETES_SERVICE_HOST) {
+    console.log("Running in Kubernetes environment - forcing production mode");
+    process.env.NODE_ENV = 'production';
+}
 
 // Initialize app and DB connection without session configuration first
 const initApp = async () => {
     console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
     console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-    console.log(`Backend URL: ${process.env.BACKEND_URL || 'http://localhost:3000'}`);
+    console.log(`Backend URL: ${process.env.BASE_URL || 'http://localhost:3000'}`);
 
     // Configure CORS first - before ANY other middleware
     const corsOptions = {
@@ -48,6 +49,7 @@ const initApp = async () => {
                 'http://35.234.9.125',  // Frontend URL without port
                 'http://34.81.121.101', // Backend URL
                 'https://34.81.121.101',
+                'http://jobmarket.fun/',
                 process.env.FRONTEND_URL,
                 process.env.BACKEND_URL
             ].filter(Boolean);
@@ -112,7 +114,7 @@ const initApp = async () => {
                 scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
                 imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-                connectSrc: ["'self'", "https://*.googleapis.com", process.env.FRONTEND_URL, process.env.BACKEND_URL],
+                connectSrc: ["'self'", "https://*.googleapis.com"],
                 frameSrc: ["'self'", "https://accounts.google.com"],
                 formAction: ["'self'", "https://accounts.google.com"],
                 frameAncestors: ["'none'"],
@@ -218,11 +220,13 @@ const initApp = async () => {
                 });
             }
             
+            const useMemoryStore = false; // Set giá trị này thành false khi Redis đã sẵn sàng
+
             // Check again if Redis is ready after waiting
-            if (redisClient.isReady) {
-                sessionConfig.store = new RedisStore({ client: redisClient });
-                console.log('Using Redis session store');
-            } else {
+            // Check again if Redis is ready after waiting
+            if (useMemoryStore || !redisClient || redisClient.readOnly || !redisClient.isReady) {
+                console.warn('Using memory store for sessions');
+                // Không cần thiết lập sessionConfig.store, Express sẽ dùng memory store mặc định
                 if (isProduction) {
                     console.error('CRITICAL: Redis not ready in production environment!');
                     // In production, this might be a serious enough issue to exit
@@ -231,9 +235,10 @@ const initApp = async () => {
                     } else {
                         console.warn('Continuing with memory store despite Redis failure - NOT RECOMMENDED FOR PRODUCTION');
                     }
-                } else {
-                    console.warn('Redis not ready, using memory store instead (only OK for development)');
                 }
+            } else {
+                sessionConfig.store = new RedisStore({ client: redisClient });
+                console.log('Using Redis session store');
             }
         } catch (error) {
             console.error('Error initializing Redis store:', error);
@@ -273,7 +278,7 @@ const initApp = async () => {
     app.use("/api/v1/company", companyRoute);
     app.use("/api/v1/job", jobRoute);
     app.use("/api/v1/application", applicationRoute);
-
+    app.use("/api/v1/test", testRoutes);
     // Add a final catch-all CORS handler for any routes that might be missed
     app.use('*', (req, res, next) => {
         res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
