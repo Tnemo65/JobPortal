@@ -38,6 +38,10 @@ spec:
                   key: PORT
             - name: NODE_ENV
               value: "production"
+            - name: DISABLE_SECURE_COOKIES
+              value: "true"
+            - name: SECURE_COOKIES
+              value: "false"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:

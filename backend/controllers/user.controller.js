@@ -5,7 +5,7 @@ import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 import { apiCache } from "../utils/redis-cache.js";
 import { Notification } from "../models/notification.model.js"; // Import Notification model
-import { redisClient } from "../utils/redis-cache.js"; // Import Redis client for refresh tokens
+import { redisClient, isRedisReady } from "../utils/redis-cache.js"; // Import Redis client and check function
 
 // Helper function to set auth cookies
 const setAuthCookies = (res, accessToken, refreshToken = null) => {
@@ -13,8 +13,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
     res.cookie("access_token", accessToken, { 
         maxAge: 60 * 60 * 1000, // 1 hour
         httpOnly: true, 
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict', // More restrictive than 'lax'
+        secure: false, // Đặt thành false để hoạt động với HTTP
+        sameSite: 'lax', // Đổi sang 'lax' thay vì 'none' để hoạt động trên HTTP
         path: '/'
     });
     
@@ -23,33 +23,49 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         res.cookie("refresh_token", refreshToken, { 
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/api/v1/user/refresh-token' // Restrict to refresh endpoint only
+            secure: false, // Đặt thành false để hoạt động với HTTP
+            sameSite: 'lax', // Đổi sang 'lax' thay vì 'none' để hoạt động trên HTTP
+            path: '/'  // Make refresh token available for all paths
         });
     }
 };
 
 // Helper function to store refresh token in Redis
 const storeRefreshToken = async (userId, refreshToken) => {
-    if (redisClient && redisClient.isReady) {
-        // Store in Redis with TTL (7 days)
-        await redisClient.set(
-            `refresh_token:${userId}`, 
-            refreshToken,
-            { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
-        );
-        console.log(`Stored refresh token in Redis for user: ${userId}`);
+    if (isRedisReady()) {
+        try {
+            // Store in Redis with TTL (7 days)
+            await redisClient.set(
+                `refresh_token:${userId}`, 
+                refreshToken,
+                { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
+            );
+            console.log(`Stored refresh token in Redis for user: ${userId}`);
+            return true;
+        } catch (error) {
+            console.error(`Failed to store refresh token in Redis: ${error.message}`);
+            return false;
+        }
     } else {
         console.warn('Redis client not available for refresh token storage');
+        return false;
     }
 };
 
 // Helper function to clear refresh token from Redis
 const clearRefreshToken = async (userId) => {
-    if (redisClient && redisClient.isReady) {
-        await redisClient.del(`refresh_token:${userId}`);
-        console.log(`Cleared refresh token from Redis for user: ${userId}`);
+    if (isRedisReady()) {
+        try {
+            await redisClient.del(`refresh_token:${userId}`);
+            console.log(`Cleared refresh token from Redis for user: ${userId}`);
+            return true;
+        } catch (error) {
+            console.error(`Failed to clear refresh token from Redis: ${error.message}`);
+            return false;
+        }
+    } else {
+        console.warn('Redis client not available for refresh token clearing');
+        return false;
     }
 };
 

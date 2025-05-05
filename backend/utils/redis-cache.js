@@ -11,6 +11,12 @@ const enableRedis = cacheWithRedis || process.env.USE_REDIS_SESSIONS === 'true';
 
 // Initialize Redis client
 let redisClient = null;
+let redisConnected = false;
+
+console.log('Redis environment check:');
+console.log('- REDIS_URL:', process.env.REDIS_URL ? 'Defined' : 'Not defined');
+console.log('- USE_REDIS_CACHE:', process.env.USE_REDIS_CACHE);
+console.log('- USE_REDIS_SESSIONS:', process.env.USE_REDIS_SESSIONS);
 
 // Create Redis client for session storage and potentially caching
 if (enableRedis && process.env.REDIS_URL) {
@@ -38,35 +44,49 @@ if (enableRedis && process.env.REDIS_URL) {
 
         redisClient.on('error', (err) => {
             console.error('Redis client error:', err);
+            redisConnected = false;
         });
 
         redisClient.on('connect', () => {
             console.log('Redis client connected successfully');
+            redisConnected = true;
         });
         
         redisClient.on('reconnecting', () => {
             console.log('Redis client reconnecting...');
+            redisConnected = false;
         });
         
         redisClient.on('end', () => {
             console.log('Redis client connection closed');
+            redisConnected = false;
         });
 
         // Connect to Redis - make this non-blocking so it doesn't prevent app startup
         (async () => {
             try {
                 await redisClient.connect();
+                // Set a flag to indicate Redis is connected successfully
+                redisConnected = true;
+                console.log('Redis connection established successfully');
+                
+                // Test connection with a simple ping
+                const pingResult = await redisClient.ping();
+                console.log('Redis ping result:', pingResult);
             } catch (err) {
                 console.error('Failed to connect to Redis during initialization:', err);
-                // Keep the redisClient reference, but app can still start without Redis
+                redisConnected = false;
+                redisClient = null; // Reset client completely on connection failure
             }
         })();
     } catch (err) {
         console.error('Failed to create Redis client:', err);
         redisClient = null;
+        redisConnected = false;
     }
 } else {
     console.log('Redis not enabled or URL not provided, skipping Redis initialization');
+    console.log('Application will use in-memory store for sessions and caching');
 }
 
 // Cấu hình apicache để sử dụng Redis nếu có
@@ -98,15 +118,17 @@ const cacheOptions = {
     headerBlacklist: ['authorization', 'cookie']
 };
 
-// Khởi tạo apicache
-const apiCache = apicache.options(cacheOptions);
+// Configure apicache
+const cacheInstance = apicache.options(cacheOptions);
+// Create middleware function
+const cacheMiddleware = cacheInstance.middleware;
 
 // Helper function to clear cache for a specific user
 const clearUserCache = async (userId) => {
-    if (cacheWithRedis && redisClient && redisClient.isReady) {
+    if (redisClient && redisClient.isReady && redisConnected) {
         try {
-            // Get all keys with this user's ID
-            const keys = await redisClient.keys(`*${userId}*`);
+            // Clear user-specific cache keys
+            const keys = await redisClient.keys(`apicache:*:${userId}:*`);
             if (keys.length > 0) {
                 await redisClient.del(keys);
                 console.log(`Cleared ${keys.length} cache entries for user ${userId}`);
@@ -116,13 +138,21 @@ const clearUserCache = async (userId) => {
         }
     } else {
         // Use apicache's built-in clear method if Redis is not available
-        apiCache.clear();
+        cacheInstance.clear();
     }
 };
 
 // Helper to check if Redis is connected and ready
 const isRedisReady = () => {
-    return !!(redisClient && redisClient.isReady);
+    return !!(redisClient && redisClient.isReady && redisConnected);
 };
 
-export { apiCache, redisClient, clearUserCache, isRedisReady };
+// Export the original apicache instance and the middleware function
+export { 
+    cacheInstance as apiCache,
+    cacheMiddleware as middleware,
+    redisClient, 
+    clearUserCache, 
+    isRedisReady, 
+    redisConnected 
+};

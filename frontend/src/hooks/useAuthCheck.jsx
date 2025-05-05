@@ -15,25 +15,32 @@ const useAuthCheck = () => {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        const clearSession = async () => {
-            // We don't need to manually clear any localStorage tokens anymore
-            // The backend will handle clearing HTTP-only cookies
-            dispatch(setUser(null));
-        };
-
         const verifyAuth = async () => {
             try {
-                // First, try to refresh the token if needed
-                await axios.post(`${USER_API_END_POINT}/refresh-token`, {}, {
-                    withCredentials: true
-                }).catch(() => {
-                    // Ignore errors - just trying to refresh if possible
-                });
+                // Kiểm tra xem có cookie refresh token không trước khi gọi refresh
+                const hasCookies = document.cookie.includes('refresh_token') || 
+                                   document.cookie.includes('access_token');
                 
-                // Only check auth if we don't already have a user in Redux store
+                // Chỉ refresh token khi có cookies hoặc user trong Redux store
+                if (user || hasCookies) {
+                    try {
+                        await api.post(`/user/refresh-token`, {}, {
+                            withCredentials: true
+                        }).catch((err) => {
+                            // Nếu lỗi 401, có thể session đã hết hạn - bỏ qua
+                            if (err.response && err.response.status === 401) {
+                                console.log("Refresh token expired or invalid");
+                            }
+                        });
+                    } catch (error) {
+                        // Bỏ qua lỗi refresh token - sẽ kiểm tra sau
+                    }
+                }
+                
+                // Nếu chưa có user trong Redux store, thử lấy thông tin
                 if (!user) {
                     try {
-                        // Call the API to verify auth status using HTTP-only cookies
+                        // Gọi API để xác thực trạng thái đăng nhập sử dụng HTTP-only cookies
                         const res = await api.get(`/user/sso/profile`, {
                             withCredentials: true,
                             headers: {
@@ -43,12 +50,16 @@ const useAuthCheck = () => {
                         });
                         
                         if (res.data.success) {
-                            // Update user info in Redux store
+                            // Cập nhật thông tin người dùng trong Redux store
                             dispatch(setUser(res.data.user));
                         }
                     } catch (error) {
-                        console.log("No active session found");
-                        // No action needed - user remains null
+                        if (error.response && error.response.status === 401) {
+                            console.log("No active session found");
+                        } else {
+                            console.error("Error fetching user profile:", error);
+                        }
+                        // Không cần thiết phải làm gì - user vẫn là null
                     }
                 }
             } catch (error) {
@@ -59,7 +70,7 @@ const useAuthCheck = () => {
         };
 
         verifyAuth();
-    }, []);
+    }, [user, dispatch]);
 
     return { checkingAuth };
 };

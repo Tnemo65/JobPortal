@@ -169,12 +169,12 @@ router.route("/refresh-token").post(async (req, res) => {
             { expiresIn: '1h' }
         );
         
-        // Set the new access token in a cookie
+        // Set the new access token in a cookie with same settings as login
         res.cookie("access_token", accessToken, {
             maxAge: 60 * 60 * 1000, // 1 hour
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: false,
+            sameSite: 'lax',
             path: '/'
         });
         

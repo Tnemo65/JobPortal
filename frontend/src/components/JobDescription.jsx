@@ -148,7 +148,25 @@ const JobDescription = () => {
             
             if (res.data.success) {
                 toast.success(res.data.message || "Ứng tuyển thành công");
-                refreshAppliedJobs(); // Refresh applied jobs list
+                
+                // Cập nhật danh sách công việc đã ứng tuyển
+                refreshAppliedJobs(); 
+                
+                // Cập nhật thông tin người dùng với công việc đã ứng tuyển
+                try {
+                    // Lấy thông tin profile user mới nhất (có danh sách công việc đã apply)
+                    const userProfileRes = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
+                        withCredentials: true
+                    });
+                    
+                    if (userProfileRes.data.success) {
+                        // Cập nhật thông tin người dùng trong redux store
+                        dispatch(setUser(userProfileRes.data.user));
+                    }
+                } catch (profileError) {
+                    console.log("Không thể cập nhật thông tin người dùng:", profileError);
+                    // Không hiển thị lỗi cho người dùng vì đã apply thành công
+                }
             } else {
                 // Revert UI state on failure
                 const revertedSingleJob = {
