@@ -59,16 +59,20 @@ const initApp = async () => {
                 process.env.BASE_URL
             ].filter(Boolean);
             
-            console.log('CORS Request from origin:', origin);
+            console.log('CORS Request from origin:', origin || '(No origin - likely server or direct request)');
+            // Log tất cả headers để kiểm tra
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+            }
             
             // For production or GKE, allow all origins from the allowed list 
             // or no origin (like curl requests or mobile apps)
             if (!origin || allowedOrigins.includes(origin) || 
-                origin.includes('localhost') || 
-                origin.includes('127.0.0.1') ||
-                origin.includes('jobmarket.fun') || 
-                origin.includes('34.81.121.101')) {
-                console.log('Origin allowed:', origin);
+                origin?.includes('localhost') || 
+                origin?.includes('127.0.0.1') ||
+                origin?.includes('jobmarket.fun') || 
+                origin?.includes('34.81.121.101')) {
+                console.log('Origin allowed:', origin || '(No origin request allowed)');
                 callback(null, true);
                 return;
             }
