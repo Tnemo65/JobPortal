@@ -4,7 +4,7 @@ import { Button } from './ui/button'
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { APPLICATION_API_END_POINT, JOB_API_END_POINT, USER_API_END_POINT } from '@/utils/constant';
-import { setSingleJob } from '@/redux/jobSlice';
+import { setSingleJob, addAppliedJob } from '@/redux/jobSlice'; // Import our new action
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { 
@@ -149,24 +149,13 @@ const JobDescription = () => {
             if (res.data.success) {
                 toast.success(res.data.message || "Ứng tuyển thành công");
                 
-                // Cập nhật danh sách công việc đã ứng tuyển
-                refreshAppliedJobs(); 
-                
-                // Cập nhật thông tin người dùng với công việc đã ứng tuyển
-                try {
-                    // Lấy thông tin profile user mới nhất (có danh sách công việc đã apply)
-                    const userProfileRes = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
-                        withCredentials: true
-                    });
-                    
-                    if (userProfileRes.data.success) {
-                        // Cập nhật thông tin người dùng trong redux store
-                        dispatch(setUser(userProfileRes.data.user));
-                    }
-                } catch (profileError) {
-                    console.log("Không thể cập nhật thông tin người dùng:", profileError);
-                    // Không hiển thị lỗi cho người dùng vì đã apply thành công
+                // Add the job to the applied jobs list in Redux
+                if (res.data.appliedJob) {
+                    dispatch(addAppliedJob(res.data.appliedJob));
                 }
+                
+                // No need to call refreshAppliedJobs as we're 
+                // adding the job directly to the Redux store
             } else {
                 // Revert UI state on failure
                 const revertedSingleJob = {

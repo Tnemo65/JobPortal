@@ -5,16 +5,19 @@ import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 import { apiCache } from "../utils/redis-cache.js";
 import { Notification } from "../models/notification.model.js"; // Import Notification model
-import { redisClient, isRedisReady } from "../utils/redis-cache.js"; // Import Redis client and check function
+import { redisClient } from "../utils/redis-cache.js"; // Import Redis client for refresh tokens
 
 // Helper function to set auth cookies
 const setAuthCookies = (res, accessToken, refreshToken = null) => {
+    // Determine if we're in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     // Set access token cookie - short lived (1 hour)
     res.cookie("access_token", accessToken, { 
         maxAge: 60 * 60 * 1000, // 1 hour
         httpOnly: true, 
-        secure: false, // Đặt thành false để hoạt động với HTTP
-        sameSite: 'lax', // Đổi sang 'lax' thay vì 'none' để hoạt động trên HTTP
+        secure: false, // Set to false for HTTP
+        sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
         path: '/'
     });
     
@@ -23,49 +26,33 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         res.cookie("refresh_token", refreshToken, { 
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             httpOnly: true, 
-            secure: false, // Đặt thành false để hoạt động với HTTP
-            sameSite: 'lax', // Đổi sang 'lax' thay vì 'none' để hoạt động trên HTTP
-            path: '/'  // Make refresh token available for all paths
+            secure: false, // Set to false for HTTP
+            sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
+            path: '/' // Allow access from all paths
         });
     }
 };
 
 // Helper function to store refresh token in Redis
 const storeRefreshToken = async (userId, refreshToken) => {
-    if (isRedisReady()) {
-        try {
-            // Store in Redis with TTL (7 days)
-            await redisClient.set(
-                `refresh_token:${userId}`, 
-                refreshToken,
-                { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
-            );
-            console.log(`Stored refresh token in Redis for user: ${userId}`);
-            return true;
-        } catch (error) {
-            console.error(`Failed to store refresh token in Redis: ${error.message}`);
-            return false;
-        }
+    if (redisClient && redisClient.isReady) {
+        // Store in Redis with TTL (7 days)
+        await redisClient.set(
+            `refresh_token:${userId}`, 
+            refreshToken,
+            { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
+        );
+        console.log(`Stored refresh token in Redis for user: ${userId}`);
     } else {
         console.warn('Redis client not available for refresh token storage');
-        return false;
     }
 };
 
 // Helper function to clear refresh token from Redis
 const clearRefreshToken = async (userId) => {
-    if (isRedisReady()) {
-        try {
-            await redisClient.del(`refresh_token:${userId}`);
-            console.log(`Cleared refresh token from Redis for user: ${userId}`);
-            return true;
-        } catch (error) {
-            console.error(`Failed to clear refresh token from Redis: ${error.message}`);
-            return false;
-        }
-    } else {
-        console.warn('Redis client not available for refresh token clearing');
-        return false;
+    if (redisClient && redisClient.isReady) {
+        await redisClient.del(`refresh_token:${userId}`);
+        console.log(`Cleared refresh token from Redis for user: ${userId}`);
     }
 };
 
@@ -899,10 +886,19 @@ export const getSavedJobs = async (req, res) => {
     try {
         const userId = req.id;
         
+        // Explicitly check user ID from auth token
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized access.",
+                success: false
+            });
+        }
+        
         const user = await User.findById(userId).populate({
             path: 'savedJobs',
             populate: {
-                path: 'company'
+                path: 'company',
+                select: 'name logo website location' // Only select needed fields
             }
         });
         
@@ -913,12 +909,18 @@ export const getSavedJobs = async (req, res) => {
             });
         }
 
+        // Make sure we're returning the user's own saved jobs
+        const savedJobs = user.savedJobs || [];
+        
+        // Add debugging information
+        console.log(`Retrieved ${savedJobs.length} saved jobs for user ${userId}`);
+
         return res.status(200).json({
-            savedJobs: user.savedJobs,
+            savedJobs: savedJobs,
             success: true
         });
     } catch (error) {
-        console.log(error);
+        console.error("Get saved jobs error:", error);
         return res.status(500).json({
             message: "Something went wrong.",
             success: false

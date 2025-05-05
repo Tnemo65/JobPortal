@@ -4,7 +4,6 @@ import { APPLICATION_API_END_POINT } from "@/utils/constant";
 import { toast } from "sonner";
 import axios from "axios";
 import { setAllAppliedJobs } from "@/redux/jobSlice";
-import api from "@/utils/api"; // Import API client để xử lý token tốt hơn
 
 const useGetAppliedJobs = () => {
     const { user } = useSelector(store => store.auth);
@@ -18,15 +17,21 @@ const useGetAppliedJobs = () => {
     const isFirstLoadRef = useRef(true);
     
     // Prevent fetching too often - set minimum interval between requests
-    const MIN_FETCH_INTERVAL = 1000; // Giảm xuống 1 giây
+    const MIN_FETCH_INTERVAL = 1000; // Reduced from 2000ms to 1000ms for better responsiveness
 
-    const onGetJobs = useCallback(async (bypassCache = false) => {
-        if (!user) return; // Don't fetch if no user
-        if (loading) return; // Don't fetch if already loading
+    const fetchAppliedJobs = useCallback(async (bypassCache = false) => {
+        if (!user) {
+            // Clear applied jobs if no user is logged in
+            dispatch(setAllAppliedJobs([]));
+            return;
+        }
+        
+        if (loading && !bypassCache) return; // Don't fetch if already loading, unless explicitly bypassing cache
         
         const now = Date.now();
-        if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL) {
-            // Too soon since last fetch, wait a bit
+        if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL && !bypassCache) {
+            // Too soon since last fetch, wait a bit unless explicitly bypassing cache
+            console.log('Throttling applied jobs fetch request');
             return;
         }
         
@@ -42,15 +47,25 @@ const useGetAppliedJobs = () => {
             try {
                 setLoading(true);
                 
+                // Cancel previous request if it exists
+                if (cancelTokenRef.current) {
+                    cancelTokenRef.current.cancel('New request initiated');
+                }
+                
+                // Create new cancel token
+                cancelTokenRef.current = axios.CancelToken.source();
+                
                 // Get params
                 const params = new URLSearchParams();
                 if (bypassCache) {
                     params.append('_', Date.now()); // Add cache busting parameter
                 }
                 
-                // Sử dụng API client tích hợp sẵn xác thực
-                const response = await api.get(`/application/get${params.toString() ? `?${params.toString()}` : ''}`, {
+                const url = `${APPLICATION_API_END_POINT}/get${params.toString() ? `?${params.toString()}` : ''}`;
+                
+                const res = await axios.get(url, {
                     withCredentials: true,
+                    cancelToken: cancelTokenRef.current.token,
                     headers: bypassCache ? {
                         'Cache-Control': 'no-cache',
                         'Pragma': 'no-cache',
@@ -58,51 +73,71 @@ const useGetAppliedJobs = () => {
                     } : {}
                 });
                 
-                if (response.data.success) {
-                    const appliedJobs = response.data.appliedJobs || [];
-                    console.log("Loaded applied jobs:", appliedJobs.length);
+                if (res.data.success) {
+                    const appliedJobs = res.data.appliedJobs || [];
                     setJobs(appliedJobs);
                     dispatch(setAllAppliedJobs(appliedJobs));
+                    console.log('Applied jobs fetched:', appliedJobs.length, 'for user:', user._id);
+                } else {
+                    // If the API call was successful but the response indicates failure
+                    console.warn('API returned success: false for applied jobs');
+                    dispatch(setAllAppliedJobs([]));
                 }
             } catch (error) {
-                console.error("Failed to fetch applied jobs:", error);
-                
-                // Không hiển thị lỗi cho lần tải đầu tiên nếu đang chuyển trang
-                if (!isFirstLoadRef.current) {
-                    toast.error(error.response?.data?.message || "Không thể tải danh sách công việc đã ứng tuyển");
+                // Don't report canceled requests as errors
+                if (axios.isCancel(error)) {
+                    console.log('Request canceled:', error.message);
+                    return;
                 }
+                
+                // Don't show errors for first load if navigating
+                if (!isFirstLoadRef.current) {
+                    console.error("API Error:", error);
+                    // Don't show toast for resource errors to avoid additional rendering
+                    if (error.message !== "net::ERR_INSUFFICIENT_RESOURCES") {
+                        toast.error(error.response?.data?.message || "Failed to get applied jobs");
+                    }
+                }
+                // Don't clear the applied jobs on error to maintain UI state
             } finally {
                 isFirstLoadRef.current = false;
                 setLoading(false);
             }
-        }, 200); // Giảm debounce time xuống 200ms
+        }, 300); // 300ms debounce time
     }, [user, loading, dispatch]);
 
-    // Run effect when user changes or component mounts
+    // Only run effect on mount or when user changes
     useEffect(() => {
         let isMounted = true;
         
+        if (!user) {
+            dispatch(setAllAppliedJobs([]));
+            return;
+        }
+        
         if (user && isMounted) {
-            // Call immediately when component mounts
-            onGetJobs();
+            fetchAppliedJobs();
         }
         
         return () => {
             isMounted = false;
-            // Clear any pending timeout when unmounting
+            // Cancel any pending requests when unmounting
+            if (cancelTokenRef.current) {
+                cancelTokenRef.current.cancel('Component unmounted');
+            }
+            // Clear any pending fetch timeout
             if (fetchTimeoutRef.current) {
                 clearTimeout(fetchTimeoutRef.current);
             }
         };
-    }, [user, onGetJobs]); // Bao gồm onGetJobs trong dependency để đảm bảo hook được gọi khi user thay đổi
+    }, [user]);
 
     // Function to force refresh data, bypassing cache
     const refreshAppliedJobs = useCallback(() => {
-        console.log("Refreshing applied jobs...");
-        onGetJobs(true);
-    }, [onGetJobs]);
+        fetchAppliedJobs(true); // Set bypassCache to true
+    }, [fetchAppliedJobs]);
 
     return { jobs, loading, refreshAppliedJobs };
-}
+};
 
 export default useGetAppliedJobs;

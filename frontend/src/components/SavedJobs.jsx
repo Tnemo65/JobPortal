@@ -7,19 +7,48 @@ import useGetSavedJobs from '@/hooks/useGetSavedJobs'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
+import { toast } from 'react-toastify'
 
 const SavedJobs = () => {
     // Lấy danh sách công việc đã lưu từ Redux store
-    const { savedJobs } = useSelector(store => store.auth);
+    const { savedJobs, user } = useSelector(store => store.auth);
     // Sử dụng hook đã cải tiến để lấy dữ liệu
     const { loading, refetch } = useGetSavedJobs();
     const navigate = useNavigate();
 
     // Làm mới danh sách khi component được mount
     useEffect(() => {
-        refetch(true); // Bypass cache to get fresh data
-    }, []);
+        // Check if user is logged in
+        if (!user) {
+            toast.error("Vui lòng đăng nhập để xem công việc đã lưu");
+            navigate("/login");
+            return;
+        }
+        
+        // Bypass cache to get fresh data
+        refetch(true); 
+    }, [user]);
 
+    // Render content based on user authentication and data loading state
+    if (!user) {
+        return (
+            <div>
+                <Navbar />
+                <div className='max-w-7xl mx-auto my-10 px-4'>
+                    <div className='bg-white p-8 rounded-lg shadow-md text-center border border-secondary/20'>
+                        <p>Vui lòng đăng nhập để xem công việc đã lưu</p>
+                        <Button 
+                            onClick={() => navigate('/login')}
+                            className='mt-4 bg-accent hover:bg-accent/90'
+                        >
+                            Đăng nhập
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
     return (
         <div>
             <Navbar />

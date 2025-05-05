@@ -57,6 +57,7 @@ export const applyJob = async (req, res) => {
         if (!user.appliedJobs) {
             user.appliedJobs = [];
         }
+        
         // Kiểm tra nếu jobId chưa tồn tại trong appliedJobs
         if (!user.appliedJobs.includes(jobId)) {
             user.appliedJobs.push(jobId);
@@ -64,6 +65,7 @@ export const applyJob = async (req, res) => {
         }
 
         // Xóa cache nếu có
+        apiCache.clear(`/api/v1/application/get`);
         apiCache.clear(`/api/v1/application/applied/${userId}`);
 
         // Tạo notification cho admin của công việc (người đã tạo job)
@@ -82,13 +84,24 @@ export const applyJob = async (req, res) => {
                 jobId: job._id, 
                 applicantId: userId, 
                 totalApplicants,
-                applicationId: newApplication._id  // Thêm ID của đơn ứng tuyển để dễ dàng truy cập
+                applicationId: newApplication._id
             }
         });
 
+        // Return the applied job details for immediate UI update
+        const populatedJob = await Job.findById(jobId)
+            .populate({
+                path: 'company',
+                select: 'name logo website location'
+            }).lean();
+
         return res.status(201).json({
             message: "Ứng tuyển thành công.",
-            success: true
+            success: true,
+            appliedJob: {
+                ...populatedJob,
+                status: 'pending' // Default status for new applications
+            }
         });
     } catch (error) {
         console.error("Apply job error:", error);
@@ -128,6 +141,14 @@ export const applyJob = async (req, res) => {
 export const getAppliedJobs = async (req, res) => {
     try {
         const userId = req.id;
+        
+        // Explicitly check user ID from auth token
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized access.",
+                success: false
+            });
+        }
         
         // Use lean() for better performance - it returns plain JavaScript objects
         const user = await User.findById(userId)
@@ -171,6 +192,9 @@ export const getAppliedJobs = async (req, res) => {
                 status: applicationStatusMap[job._id.toString()] || 'pending'
             };
         });
+
+        // Add debugging information
+        console.log(`Retrieved ${enrichedJobs.length} applied jobs for user ${userId}`);
 
         return res.status(200).json({
             appliedJobs: enrichedJobs,

@@ -35,6 +35,13 @@ const jobSlice = createSlice({
             state.allAdminJobs = [action.payload, ...state.allAdminJobs];
             // Cập nhật luôn cả allJobs để đồng bộ dữ liệu
             state.allJobs = [action.payload, ...state.allJobs];
+        },
+        addAppliedJob: (state, action) => {
+            // Check if the job is already in the applied jobs list
+            const exists = state.allAppliedJobs.some(job => job._id === action.payload._id);
+            if (!exists) {
+                state.allAppliedJobs = [action.payload, ...state.allAppliedJobs];
+            }
         }
     }
 });
@@ -45,6 +52,7 @@ export const {
     setSearchJobByText, 
     setAllAppliedJobs,
     setSearchedQuery,
-    addAdminJob
+    addAdminJob,
+    addAppliedJob
 } = jobSlice.actions;
 export default jobSlice.reducer;
