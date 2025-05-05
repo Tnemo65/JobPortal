@@ -24,6 +24,9 @@ dotenv.config({});
 
 const app = express();
 
+// Enable trust proxy to work with Kubernetes and other proxy environments
+app.set('trust proxy', true);
+
 // Force set NODE_ENV to production when running on GKE
 if (process.env.KUBERNETES_SERVICE_HOST) {
     console.log("Running in Kubernetes environment - forcing production mode");
@@ -60,9 +63,11 @@ const initApp = async () => {
             ].filter(Boolean);
             
             console.log('CORS Request from origin:', origin || '(No origin - likely server or direct request)');
-            // Log tất cả headers để kiểm tra
+            // Only log headers in non-production environment
             if (process.env.NODE_ENV !== 'production') {
-                console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+                // Don't try to access req.headers here - it's not available in this callback
+                // The req parameter isn't passed to this callback function
+                console.log('CORS origin check for:', origin);
             }
             
             // For production or GKE, allow all origins from the allowed list 

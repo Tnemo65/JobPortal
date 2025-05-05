@@ -39,11 +39,21 @@ if (enableRedis && process.env.REDIS_URL) {
                     return delay;
                 },
                 connectTimeout: 10000, // 10 seconds
-            }
+            },
+            // Enable cluster mode auto-detection
+            enableAutoPipelining: true,
+            enableReadyCheck: true,
+            // Be more resilient to cluster topology changes
+            disableOfflineQueue: false
         });
 
+        // Add special handling for cluster mode
         redisClient.on('error', (err) => {
             console.error('Redis client error:', err);
+            // Check for MOVED errors indicating cluster mode
+            if (err.message && err.message.includes('MOVED')) {
+                console.warn('Detected Redis cluster MOVED error - this may indicate the Redis URL needs to include cluster mode configuration');
+            }
             redisConnected = false;
         });
 
