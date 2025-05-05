@@ -10,6 +10,11 @@ const LatestJobs = () => {
     const {allJobs} = useSelector(store=>store.job);
     const navigate = useNavigate();
    
+    // Đảm bảo hiển thị các công việc mới nhất
+    const latestJobs = React.useMemo(() => {
+        return [...allJobs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
+    }, [allJobs]);
+    
     return (
         <section id="latest-jobs" className="py-20 bg-gradient-to-b from-background to-secondary/10">
             <div className="container px-4 mx-auto">
@@ -66,7 +71,7 @@ const LatestJobs = () => {
                         }}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
-                        {allJobs?.slice(0,6).map((job) => (
+                        {latestJobs.map((job) => (
                             <motion.div
                                 key={job._id}
                                 variants={{

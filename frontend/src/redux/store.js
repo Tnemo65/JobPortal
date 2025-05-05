@@ -1,38 +1,57 @@
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import authSlice from "./authSlice";
-import jobSlice from "./jobSlice";
-import {
-    persistStore,
-    persistReducer,
-    FLUSH,
-    REHYDRATE,
-    PAUSE,
-    PERSIST,
-    PURGE,
-    REGISTER,
-} from 'redux-persist'
-import storage from 'redux-persist/lib/storage'
-import companySlice from "./companySlice";
-import applicationSlice from "./applicationSlice";
+import { configureStore } from "@reduxjs/toolkit";
+import { 
+    persistReducer, 
+    persistStore, 
+    FLUSH, 
+    REHYDRATE, 
+    PAUSE, 
+    PERSIST, 
+    PURGE, 
+    REGISTER 
+} from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import authReducer from "./authSlice";
+import jobReducer from "./jobSlice";
+import companyReducer from "./companySlice";
+import applicationReducer from "./applicationSlice";
 
-const persistConfig = {
-    key: 'root',
-    version: 1,
+// Configure auth persistence - don't store sensitive data
+const authPersistConfig = {
+    key: "auth",
     storage,
-    whitelist: ['auth'] // Chỉ lưu trữ state của auth để khôi phục sau khi refresh
-}
+    // Include savedJobs in whitelist to persist them
+    whitelist: ["user", "savedJobs"]
+};
 
-const rootReducer = combineReducers({
-    auth: authSlice,
-    job: jobSlice,
-    company: companySlice,
-    application: applicationSlice
-})
+// Configure job persistence
+const jobPersistConfig = {
+    key: "job",
+    storage,
+    whitelist: ["singleJob", "allJobs", "allAdminJobs", "allAppliedJobs"]
+};
 
-const persistedReducer = persistReducer(persistConfig, rootReducer)
+// Configure company persistence
+const companyPersistConfig = {
+    key: "company",
+    storage,
+    whitelist: ["singleCompany", "allCompanies"]
+};
 
+// Configure application persistence
+const applicationPersistConfig = {
+    key: "application",
+    storage,
+    whitelist: ["applicants"]
+};
+
+// Create the store with persisted reducers
 const store = configureStore({
-    reducer: persistedReducer,
+    reducer: {
+        auth: persistReducer(authPersistConfig, authReducer),
+        job: persistReducer(jobPersistConfig, jobReducer),
+        company: persistReducer(companyPersistConfig, companyReducer),
+        application: persistReducer(applicationPersistConfig, applicationReducer)
+    },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {

@@ -49,9 +49,9 @@ const initApp = async () => {
                 'http://35.234.9.125',  // Frontend URL without port
                 'http://34.81.121.101', // Backend URL
                 'https://34.81.121.101',
-                'http://jobmarket.fun/',
+                'http://jobmarket.fun',
                 process.env.FRONTEND_URL,
-                process.env.BACKEND_URL
+                process.env.BASE_URL
             ].filter(Boolean);
             
             console.log('CORS Request from origin:', origin);
@@ -254,6 +254,23 @@ const initApp = async () => {
     // Initialize Passport
     app.use(passport.initialize());
     app.use(passport.session());
+
+    // Clear all active tokens at server start
+    if (redisClient && redisClient.isReady) {
+        console.log('Clearing all tokens from previous sessions...');
+        redisClient.keys('refresh_token:*').then(keys => {
+            if (keys.length > 0) {
+                console.log(`Found ${keys.length} active tokens to clear`);
+                return redisClient.del(keys);
+            } else {
+                console.log('No existing tokens found');
+            }
+        }).catch(err => {
+            console.error('Error clearing existing tokens:', err);
+        });
+    } else {
+        console.warn('Redis not available, cannot clear existing tokens');
+    }
 
     // Health check endpoint cho Kubernetes readiness/liveness probe
     app.get('/health', (req, res) => {

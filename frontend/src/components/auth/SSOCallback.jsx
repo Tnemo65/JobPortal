@@ -13,12 +13,11 @@ const SSOCallback = () => {
     const [searchParams] = useSearchParams();
     const success = searchParams.get('success');
     const error = searchParams.get('error');
-    const token = searchParams.get('token'); // Lấy token từ URL nếu có
     const [status, setStatus] = useState('loading'); // loading, success, error
     const requestTimeoutRef = useRef(null);
     
     useEffect(() => {
-        // Đảm bảo loading state được reset nếu component unmount
+        // Clean up loading state if component unmounts
         return () => {
             dispatch(setLoading(false));
             if (requestTimeoutRef.current) {
@@ -30,27 +29,18 @@ const SSOCallback = () => {
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                // Reset loading state
+                // Set loading state
                 dispatch(setLoading(true));
                 
-                // Thiết lập timeout
+                // Set up timeout for the request
                 const controller = new AbortController();
                 requestTimeoutRef.current = setTimeout(() => controller.abort(), 15000);
                 
                 if (success === 'true') {
-                    // Sử dụng token từ URL nếu có
-                    if (token) {
-                        localStorage.setItem('token', token);
-                        console.log('Token saved from URL params:', token.substring(0, 10) + '...');
-                    }
-                    
-                    // Gọi API để lấy thông tin người dùng
+                    // Get user profile using the cookies that were set by the backend
                     const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
                         withCredentials: true,
-                        // signal: controller.signal
-                        headers: {
-                            Authorization: `Bearer ${token || localStorage.getItem('token')}`
-                        }
+                        signal: controller.signal
                     });
                     
                     clearTimeout(requestTimeoutRef.current);
@@ -62,7 +52,7 @@ const SSOCallback = () => {
                         
                         // Redirect based on user role
                         setTimeout(() => {
-                            if (res.data.user.role === 'recruiter') {
+                            if (res.data.user.role === 'admin') {
                                 navigate('/admin/companies');
                             } else {
                                 navigate('/');
@@ -80,8 +70,6 @@ const SSOCallback = () => {
                 }
             } catch (err) {
                 console.error('SSO callback error:', err);
-                // Xóa token nếu không hợp lệ
-                localStorage.removeItem('token');
                 
                 if (err.name === 'AbortError') {
                     toast.error("Quá thời gian kết nối. Vui lòng thử lại sau.");
@@ -92,15 +80,14 @@ const SSOCallback = () => {
                 setStatus('error');
                 setTimeout(() => navigate('/login'), 3000);
             } finally {
-                // Đảm bảo loading state được reset
+                // Make sure loading state is reset
                 dispatch(setLoading(false));
             }
         };
 
         fetchUserProfile();
-    }, [success, error, token, dispatch, navigate]);
+    }, [success, error, dispatch, navigate]);
 
-    // Component UI không thay đổi...
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
             <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">

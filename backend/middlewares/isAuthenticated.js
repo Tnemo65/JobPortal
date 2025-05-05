@@ -4,15 +4,20 @@ const isAuthenticated = async (req, res, next) => {
     try {
         let token;
         
-        // Kiểm tra token trong header Authorization
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.split(' ')[1];
+        // Priority 1: Check for access_token in cookies (preferred secure method)
+        if (req.cookies.access_token) {
+            token = req.cookies.access_token;
         }
-        
-        // Nếu không có token trong header, thử lấy từ cookie
-        if (!token) {
+        // Priority 2: Check legacy token in cookies (backward compatibility)
+        else if (req.cookies.token) {
             token = req.cookies.token;
+        }
+        // Priority 3: Check Authorization header (least preferred, for backward compatibility)
+        else {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.split(' ')[1];
+            }
         }
         
         // Kiểm tra token có tồn tại không

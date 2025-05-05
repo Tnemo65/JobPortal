@@ -29,6 +29,12 @@ const jobSlice = createSlice({
         },
         setSearchedQuery:(state,action) => {
             state.searchedQuery = action.payload;
+        },
+        addAdminJob:(state,action) => {
+            // Thêm công việc mới vào đầu mảng allAdminJobs
+            state.allAdminJobs = [action.payload, ...state.allAdminJobs];
+            // Cập nhật luôn cả allJobs để đồng bộ dữ liệu
+            state.allJobs = [action.payload, ...state.allJobs];
         }
     }
 });
@@ -38,6 +44,7 @@ export const {
     setAllAdminJobs,
     setSearchJobByText, 
     setAllAppliedJobs,
-    setSearchedQuery
+    setSearchedQuery,
+    addAdminJob
 } = jobSlice.actions;
 export default jobSlice.reducer;

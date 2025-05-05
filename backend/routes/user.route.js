@@ -6,8 +6,9 @@ import { Notification } from '../models/notification.model.js';
 import passport from '../utils/passport.js';
 import { authLimiter, apiLimiter } from "../middlewares/rate-limiter.js";
 import strongPasswordCheck from "../middlewares/strong-password.js";
-import { apiCache } from "../utils/redis-cache.js";
+import { apiCache, redisClient } from "../utils/redis-cache.js";
 import he from 'he'; // Import thư viện he để decode HTML entities
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
@@ -120,6 +121,90 @@ router.route("/jobs/unsave/:jobId")
     
 router.route("/jobs/saved").get(isAuthenticated, getSavedJobs);
 router.route("/profile/resume").delete(isAuthenticated, deleteResume);
+
+// Add refreshToken endpoint to handle token refreshing
+router.route("/refresh-token").post(async (req, res) => {
+    try {
+        // Get refresh token from cookie
+        const refreshToken = req.cookies.refresh_token;
+        
+        if (!refreshToken) {
+            return res.status(401).json({
+                message: "Refresh token not provided",
+                success: false,
+                code: "NO_REFRESH_TOKEN"
+            });
+        }
+        
+        // Verify refresh token
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.SECRET_KEY);
+        
+        // Check if token is a refresh token
+        if (!decoded || !decoded.userId || decoded.tokenType !== 'refresh') {
+            return res.status(401).json({
+                message: "Invalid refresh token",
+                success: false,
+                code: "INVALID_REFRESH_TOKEN"
+            });
+        }
+        
+        // Check if token exists in Redis
+        if (redisClient && redisClient.isReady) {
+            const storedToken = await redisClient.get(`refresh_token:${decoded.userId}`);
+            
+            // Token doesn't exist in Redis or doesn't match
+            if (!storedToken || storedToken !== refreshToken) {
+                return res.status(401).json({
+                    message: "Refresh token expired or revoked",
+                    success: false,
+                    code: "INVALID_REFRESH_TOKEN"
+                });
+            }
+        }
+        
+        // Generate new access token
+        const accessToken = jwt.sign(
+            { userId: decoded.userId },
+            process.env.SECRET_KEY,
+            { expiresIn: '1h' }
+        );
+        
+        // Set the new access token in a cookie
+        res.cookie("access_token", accessToken, {
+            maxAge: 60 * 60 * 1000, // 1 hour
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/'
+        });
+        
+        return res.status(200).json({
+            message: "Token refreshed successfully",
+            success: true
+        });
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                message: "Refresh token expired",
+                success: false,
+                code: "TOKEN_EXPIRED"
+            });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                message: "Invalid refresh token",
+                success: false,
+                code: "INVALID_TOKEN"
+            });
+        } else {
+            console.error("Refresh token error:", error);
+            return res.status(500).json({
+                message: "Error refreshing token",
+                success: false,
+                code: "SERVER_ERROR"
+            });
+        }
+    }
+});
 
 export default router;
 

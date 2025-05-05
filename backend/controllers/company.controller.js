@@ -38,15 +38,33 @@ export const registerCompany = async (req, res) => {
                 success: false
             });
         }
+
+        // Xử lý upload logo nếu có
+        let logo;
+        if (req.file) {
+            try {
+                const fileUri = getDataUri(req.file);
+                const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+                    folder: "job_portal/company_logos"
+                });
+                logo = cloudResponse.secure_url;
+            } catch (uploadError) {
+                console.error("Logo upload error:", uploadError);
+                return res.status(400).json({
+                    message: "Không thể tải lên logo. Vui lòng thử lại.",
+                    success: false
+                });
+            }
+        }
         
-        // Tạo công ty mới
+        // Tạo công ty mới - chỉ sử dụng trường userId theo đúng schema
         const company = await Company.create({
             name: companyName,
             description: description || "",
             website: website || "",
             location: location || "",
-            created_by: userId,
-            userId: userId // Giữ để tương thích ngược
+            logo: logo || "",
+            userId: userId
         });
 
         return res.status(201).json({
@@ -67,7 +85,7 @@ export const getCompany = async (req, res) => {
     try {
         const userId = req.id; // ID người dùng đã đăng nhập
         
-        const companies = await Company.find({ created_by: userId })
+        const companies = await Company.find({ userId: userId })
             .sort({ createdAt: -1 });
             
         return res.status(200).json({

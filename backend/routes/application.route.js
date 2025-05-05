@@ -7,15 +7,15 @@ import { apiCache } from "../utils/redis-cache.js";
  
 const router = express.Router();
 
-// Route cho ứng viên (student) apply job
+// Route cho người dùng (user) apply job
 router.route("/apply/:id").get(
     isAuthenticated, 
-    checkRole(['student']), 
+    checkRole(['user']), 
     apiLimiter,
     applyJob
 );
 
-// Route cho ứng viên xem các job đã apply - giảm cache xuống 30 giây để cập nhật nhanh hơn
+// Route cho người dùng xem các job đã apply - giảm cache xuống 30 giây để cập nhật nhanh hơn
 router.route("/get").get(
     isAuthenticated,
     apiLimiter,
@@ -23,19 +23,19 @@ router.route("/get").get(
     getAppliedJobs
 );
 
-// Route cho nhà tuyển dụng xem ứng viên của một job - thêm cache 2 phút
+// Route cho admin xem ứng viên của một job - thêm cache 2 phút
 router.route("/:id/applicants").get(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     apiLimiter,
     apiCache.middleware('2 minutes'),
     getApplicants
 );
 
-// Route cho nhà tuyển dụng cập nhật trạng thái ứng tuyển
+// Route cho admin cập nhật trạng thái ứng tuyển
 router.route("/status/:id/update").post(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     apiLimiter,
     updateStatus
 );

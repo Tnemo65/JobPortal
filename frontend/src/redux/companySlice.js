@@ -17,8 +17,12 @@ const companySlice = createSlice({
         },
         setSearchCompanyByText:(state,action) => {
             state.searchCompanyByText = action.payload;
+        },
+        addCompany:(state,action) => {
+            // Thêm công ty mới vào đầu mảng
+            state.companies = [action.payload, ...state.companies];
         }
     }
 });
-export const {setSingleCompany, setCompanies,setSearchCompanyByText} = companySlice.actions;
+export const {setSingleCompany, setCompanies, setSearchCompanyByText, addCompany} = companySlice.actions;
 export default companySlice.reducer;

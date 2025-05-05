@@ -87,7 +87,7 @@ const Signup = () => {
             return;
         }
         
-        if (!input.file && input.role === 'student') {
+        if (!input.file && input.role === 'user') {
             toast.error("Vui lòng tải lên CV của bạn");
             return;
         }
@@ -243,26 +243,26 @@ const Signup = () => {
                                         <div className="flex items-center bg-gray-50 px-4 py-2 rounded-md border border-gray-200 hover:bg-accent/5 transition-colors">
                                             <Input
                                                 type="radio"
-                                                id="role-student"
+                                                id="role-user"
                                                 name="role"
-                                                value="student"
-                                                checked={input.role === 'student'}
+                                                value="user"
+                                                checked={input.role === 'user'}
                                                 onChange={changeEventHandler}
                                                 className="cursor-pointer h-4 w-4 text-accent focus:ring-accent"
                                             />
-                                            <Label htmlFor="role-student" className="ml-2 cursor-pointer">Job Seeker</Label>
+                                            <Label htmlFor="role-user" className="ml-2 cursor-pointer">Job Seeker</Label>
                                         </div>
                                         <div className="flex items-center bg-gray-50 px-4 py-2 rounded-md border border-gray-200 hover:bg-accent/5 transition-colors">
                                             <Input
                                                 type="radio"
-                                                id="role-recruiter"
+                                                id="role-admin"
                                                 name="role"
-                                                value="recruiter"
-                                                checked={input.role === 'recruiter'}
+                                                value="admin"
+                                                checked={input.role === 'admin'}
                                                 onChange={changeEventHandler}
                                                 className="cursor-pointer h-4 w-4 text-accent focus:ring-accent"
                                             />
-                                            <Label htmlFor="role-recruiter" className="ml-2 cursor-pointer">Recruiter</Label>
+                                            <Label htmlFor="role-admin" className="ml-2 cursor-pointer">Admin</Label>
                                         </div>
                                     </RadioGroup>
                                 </div>

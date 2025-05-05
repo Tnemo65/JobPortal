@@ -5,6 +5,72 @@ import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 import { apiCache } from "../utils/redis-cache.js";
 import { Notification } from "../models/notification.model.js"; // Import Notification model
+import { redisClient } from "../utils/redis-cache.js"; // Import Redis client for refresh tokens
+
+// Helper function to set auth cookies
+const setAuthCookies = (res, accessToken, refreshToken = null) => {
+    // Set access token cookie - short lived (1 hour)
+    res.cookie("access_token", accessToken, { 
+        maxAge: 60 * 60 * 1000, // 1 hour
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict', // More restrictive than 'lax'
+        path: '/'
+    });
+    
+    // Set refresh token cookie if provided - longer lived (7 days)
+    if (refreshToken) {
+        res.cookie("refresh_token", refreshToken, { 
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/api/v1/user/refresh-token' // Restrict to refresh endpoint only
+        });
+    }
+};
+
+// Helper function to store refresh token in Redis
+const storeRefreshToken = async (userId, refreshToken) => {
+    if (redisClient && redisClient.isReady) {
+        // Store in Redis with TTL (7 days)
+        await redisClient.set(
+            `refresh_token:${userId}`, 
+            refreshToken,
+            { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
+        );
+        console.log(`Stored refresh token in Redis for user: ${userId}`);
+    } else {
+        console.warn('Redis client not available for refresh token storage');
+    }
+};
+
+// Helper function to clear refresh token from Redis
+const clearRefreshToken = async (userId) => {
+    if (redisClient && redisClient.isReady) {
+        await redisClient.del(`refresh_token:${userId}`);
+        console.log(`Cleared refresh token from Redis for user: ${userId}`);
+    }
+};
+
+// Helper function to generate tokens
+const generateTokens = async (userId) => {
+    // Generate short-lived access token (1 hour)
+    const accessToken = await jwt.sign(
+        { userId }, 
+        process.env.SECRET_KEY, 
+        { expiresIn: '1h' }
+    );
+    
+    // Generate longer-lived refresh token (7 days)
+    const refreshToken = await jwt.sign(
+        { userId, tokenType: 'refresh' }, 
+        process.env.REFRESH_TOKEN_SECRET || process.env.SECRET_KEY, 
+        { expiresIn: '7d' }
+    );
+    
+    return { accessToken, refreshToken };
+};
 
 export const register = async (req, res) => {
     try {
@@ -37,7 +103,7 @@ export const register = async (req, res) => {
         }
 
         // Kiểm tra vai trò hợp lệ
-        if (role !== 'student' && role !== 'recruiter') {
+        if (role !== 'user' && role !== 'admin') {
             return res.status(400).json({
                 message: "Vai trò không hợp lệ",
                 success: false,
@@ -177,11 +243,14 @@ export const login = async (req, res) => {
             });
         }
 
-        // Tạo JWT token
-        const tokenData = {
-            userId: user._id
-        };
-        const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
+        // Trước khi tạo token mới, xóa mọi refresh token cũ của người dùng này
+        await clearRefreshToken(user._id);
+
+        // Generate both access and refresh tokens
+        const { accessToken, refreshToken } = await generateTokens(user._id);
+
+        // Store refresh token in Redis
+        await storeRefreshToken(user._id, refreshToken);
 
         // Chuẩn bị thông tin người dùng để trả về client (bỏ mật khẩu)
         const userData = {
@@ -193,15 +262,13 @@ export const login = async (req, res) => {
             profile: user.profile
         };
 
-        // Đặt cookie và trả về thông tin đăng nhập thành công
-        return res.status(200).cookie("token", token, { 
-            maxAge: 1 * 24 * 60 * 60 * 1000, 
-            httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none',
-            // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            path: '/'
-        }).json({
+        // Set auth cookies and return login success response
+        setAuthCookies(res, accessToken, refreshToken);
+        
+        // Ghi log đăng nhập thành công
+        console.log(`User login successful: ${userData.email} (${userData._id}), role: ${userData.role}`);
+        
+        return res.status(200).json({
             message: `Chào mừng trở lại ${userData.fullname}`,
             user: userData,
             success: true
@@ -216,17 +283,24 @@ export const login = async (req, res) => {
 }
 export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie("token", "", { 
-            maxAge: 0,
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none'  // Đổi từ 'strict' sang 'none' để hỗ trợ CORS
-        }).json({
+        // Get user ID from access token to clear refresh token from Redis
+        const userId = req.id;
+        if (userId) {
+            // Clear refresh token from Redis
+            await clearRefreshToken(userId);
+        }
+
+        // Clear all auth cookies
+        res.clearCookie("access_token");
+        res.clearCookie("refresh_token");
+        res.clearCookie("token"); // Also clear legacy token for backward compatibility
+        
+        return res.status(200).json({
             message: "Logged out successfully.",
             success: true
         });
     } catch (error) {
-        console.log(error);
+        console.error("Logout error:", error);
         return res.status(500).json({
             message: "Logout failed",
             success: false
@@ -245,11 +319,14 @@ export const ssoAuthSuccess = async (req, res) => {
         
         console.log('Google SSO authentication successful for user:', user.email);
         
-        // Create token for the authenticated user
-        const tokenData = {
-            userId: user._id
-        };
-        const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
+        // Clear any existing tokens for this user before creating new ones
+        await clearRefreshToken(user._id);
+        
+        // Generate both access and refresh tokens
+        const { accessToken, refreshToken } = await generateTokens(user._id);
+        
+        // Store refresh token in Redis
+        await storeRefreshToken(user._id, refreshToken);
 
         // Format user data for response
         const userData = {
@@ -261,20 +338,15 @@ export const ssoAuthSuccess = async (req, res) => {
             profile: user.profile
         };
 
-        // Set the token in a cookie
-        res.cookie("token", token, { 
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            // sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            sameSite: 'none',
-            path: '/',
-            domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let the browser set the appropriate domain
-        });
+        // Set the tokens in secure cookies
+        setAuthCookies(res, accessToken, refreshToken);
         
-        // Redirect to frontend with token in URL query params
+        // Log successful SSO login
+        console.log(`SSO login successful: ${userData.email} (${userData._id}), role: ${userData.role}`);
+        
+        // Redirect to frontend WITHOUT token in URL params - we're using cookies now
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-        // res.redirect(`${frontendURL}/sso-callback?success=true&token=${token}`);
-        const redirectURL = `${frontendURL}/sso-callback?success=true&token=${encodeURIComponent(token)}`;
+        return res.redirect(`${frontendURL}/sso-callback?success=true`);
     } catch (error) {
         console.error('SSO auth success error:', error);
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';

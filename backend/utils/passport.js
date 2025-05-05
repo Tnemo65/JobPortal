@@ -48,7 +48,7 @@ passport.use(new GoogleStrategy({
                 email: profile.emails[0].value,
                 phoneNumber: '0000000000', // Số điện thoại mặc định
                 password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Mật khẩu ngẫu nhiên
-                role: 'student', // Vai trò mặc định
+                role: 'user', // Vai trò mặc định
                 profile: {
                     profilePhoto: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : '',
                     skills: []

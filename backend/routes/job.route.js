@@ -13,18 +13,18 @@ const router = express.Router();
 router.route("/get").get(apiLimiter, apiCache.middleware('5 minutes'), getAllJobs);
 router.route("/get/:id").get(apiLimiter, apiCache.middleware('2 minutes'), getJobById);
 
-// Protected routes - chỉ người dùng đã đăng nhập và là nhà tuyển dụng mới truy cập được
+// Protected routes - chỉ người dùng đã đăng nhập và là admin mới truy cập được
 router.route("/post").post(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     apiLimiter,
     postJob
 );
 
-// Route xem tất cả tin tuyển dụng của nhà tuyển dụng
+// Route xem tất cả tin tuyển dụng của admin
 router.route("/getadminjobs").get(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     apiLimiter,
     apiCache.middleware('2 minutes'),
     getAdminJobs
@@ -35,7 +35,7 @@ router.route("/getadminjobs").get(
 // Route cập nhật tin tuyển dụng, kiểm tra quyền chủ sở hữu
 router.route("/update/:id").put(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     checkOwnership('job'),
     apiLimiter,
     (req, res) => {
@@ -50,7 +50,7 @@ router.route("/update/:id").put(
 // Route xóa tin tuyển dụng, kiểm tra quyền chủ sở hữu
 router.route("/delete/:id").delete(
     isAuthenticated, 
-    checkRole(['recruiter']), 
+    checkRole(['admin']), 
     checkOwnership('job'),
     apiLimiter,
     (req, res) => {

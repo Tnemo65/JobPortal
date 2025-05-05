@@ -14,6 +14,7 @@ const useGetAppliedJobs = () => {
     const cancelTokenRef = useRef(null);
     const fetchTimeoutRef = useRef(null);
     const lastFetchTimeRef = useRef(0);
+    const isFirstLoadRef = useRef(true);
     
     // Prevent fetching too often - set minimum interval between requests (e.g., 2 seconds)
     const MIN_FETCH_INTERVAL = 2000;
@@ -22,36 +23,35 @@ const useGetAppliedJobs = () => {
         if (!user || loading) return; // Don't fetch if already loading
         
         const now = Date.now();
-        if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL && !bypassCache) {
-            console.log("Fetch prevented - too soon after previous fetch");
+        if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL) {
+            // Too soon since last fetch, wait a bit
             return;
         }
         
-        // Cancel any in-progress requests
-        if (cancelTokenRef.current) {
-            cancelTokenRef.current.cancel('Request superseded by newer request');
-        }
-        
-        // Clear any pending fetch timeout
+        lastFetchTimeRef.current = now;
+
+        // Clear any scheduled fetch
         if (fetchTimeoutRef.current) {
             clearTimeout(fetchTimeoutRef.current);
         }
-        
-        // Debounce the request
+
+        // Schedule the fetch with a slight delay to debounce
         fetchTimeoutRef.current = setTimeout(async () => {
             try {
                 setLoading(true);
-                lastFetchTimeRef.current = Date.now();
                 
-                // Create a new cancel token
+                // Cancel previous request if it exists
+                if (cancelTokenRef.current) {
+                    cancelTokenRef.current.cancel('New request initiated');
+                }
+                
+                // Create new cancel token
                 cancelTokenRef.current = axios.CancelToken.source();
                 
-                // Add query params for cache control
+                // Get params
                 const params = new URLSearchParams();
-                
-                // Add timestamp for cache busting only when explicitly requested
                 if (bypassCache) {
-                    params.append('_t', Date.now());
+                    params.append('_', Date.now()); // Add cache busting parameter
                 }
                 
                 const url = `${APPLICATION_API_END_POINT}/get${params.toString() ? `?${params.toString()}` : ''}`;
@@ -78,13 +78,17 @@ const useGetAppliedJobs = () => {
                     return;
                 }
                 
-                console.error("API Error:", error);
-                
-                // Don't show toast for resource errors to avoid additional rendering
-                if (error.message !== "net::ERR_INSUFFICIENT_RESOURCES") {
-                    toast.error(error.response?.data?.message || "Failed to get applied jobs");
+                // Không hiển thị lỗi cho lần tải đầu tiên nếu đang chuyển trang
+                if (!isFirstLoadRef.current) {
+                    console.error("API Error:", error);
+                    
+                    // Don't show toast for resource errors to avoid additional rendering
+                    if (error.message !== "net::ERR_INSUFFICIENT_RESOURCES") {
+                        toast.error(error.response?.data?.message || "Failed to get applied jobs");
+                    }
                 }
             } finally {
+                isFirstLoadRef.current = false;
                 setLoading(false);
             }
         }, 300); // 300ms debounce time

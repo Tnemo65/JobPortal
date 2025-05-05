@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { COMPANY_API_END_POINT } from '@/utils/constant';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setCompanies } from '@/redux/companySlice';
 
 const useGetAllCompanies = () => {
     const [loading, setLoading] = useState(false);
-    const [companies, setCompanies] = useState([]);
+    const [localCompanies, setLocalCompanies] = useState([]);
+    const dispatch = useDispatch();
 
     const getAllCompanies = async () => {
         try {
@@ -16,7 +19,9 @@ const useGetAllCompanies = () => {
             });
             
             if (res.data.success) {
-                setCompanies(res.data.companies);
+                setLocalCompanies(res.data.companies);
+                // Cập nhật Redux store với danh sách công ty
+                dispatch(setCompanies(res.data.companies));
             }
         } catch (error) {
             console.log(error);
@@ -28,11 +33,11 @@ const useGetAllCompanies = () => {
 
     useEffect(() => {
         getAllCompanies();
-    }, []);
+    }, [dispatch]);
 
     return {
         loading,
-        companies,
+        companies: localCompanies,
         getAllCompanies
     };
 }

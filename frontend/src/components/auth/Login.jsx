@@ -60,9 +60,11 @@ const Login = () => {
         try {
             dispatch(setLoading(true));
             
+            // Log in using our API utility which sends cookies automatically
             const res = await api.post('/user/login', input);
             
             if (res.data.success) {
+                // Just update Redux with user info - token is handled by HTTP-only cookies
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message);
                 navigate("/");
@@ -169,26 +171,26 @@ const Login = () => {
                                             <div className="flex items-center bg-gray-50 px-4 py-2 rounded-md border border-gray-200 hover:bg-accent/5 transition-colors">
                                                 <Input
                                                     type="radio"
-                                                    id="role-student"
+                                                    id="role-user"
                                                     name="role"
-                                                    value="student"
-                                                    checked={input.role === 'student'}
+                                                    value="user"
+                                                    checked={input.role === 'user'}
                                                     onChange={changeEventHandler}
                                                     className="cursor-pointer h-4 w-4 text-accent focus:ring-accent"
                                                 />
-                                                <Label htmlFor="role-student" className="ml-2 cursor-pointer">Job Seeker</Label>
+                                                <Label htmlFor="role-user" className="ml-2 cursor-pointer">Job Seeker</Label>
                                             </div>
                                             <div className="flex items-center bg-gray-50 px-4 py-2 rounded-md border border-gray-200 hover:bg-accent/5 transition-colors">
                                                 <Input
                                                     type="radio"
-                                                    id="role-recruiter"
+                                                    id="role-admin"
                                                     name="role"
-                                                    value="recruiter"
-                                                    checked={input.role === 'recruiter'}
+                                                    value="admin"
+                                                    checked={input.role === 'admin'}
                                                     onChange={changeEventHandler}
                                                     className="cursor-pointer h-4 w-4 text-accent focus:ring-accent"
                                                 />
-                                                <Label htmlFor="role-recruiter" className="ml-2 cursor-pointer">Recruiter</Label>
+                                                <Label htmlFor="role-admin" className="ml-2 cursor-pointer">Admin</Label>
                                             </div>
                                         </RadioGroup>
                                     </div>

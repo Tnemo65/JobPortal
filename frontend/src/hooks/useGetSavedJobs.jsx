@@ -6,13 +6,12 @@ import axios from 'axios';
 import { setSavedJobs } from "@/redux/authSlice";
 
 const useGetSavedJobs = () => {
-    const { user, savedJobs } = useSelector(store => store.auth);
-    const [jobs, setJobs] = useState([]);
+    const { user } = useSelector(store => store.auth);
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch();
 
-    // Sử dụng useCallback để đảm bảo hàm onGetJobs không được tạo lại mỗi lần render
-    const onGetJobs = useCallback(async () => {
+    // Sử dụng useCallback để đảm bảo hàm không tạo lại khi render
+    const fetchSavedJobs = useCallback(async (bypassCache = false) => {
         if (!user) return;
         
         try {
@@ -20,28 +19,33 @@ const useGetSavedJobs = () => {
             
             const res = await axios.get(`${USER_API_END_POINT}/jobs/saved`, {
                 withCredentials: true,
-                // Thêm timestamp để đảm bảo request luôn được thực hiện mới
-                params: { _t: new Date().getTime() }
+                headers: bypassCache ? {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                } : {}
             });
             
             if (res.data.success) {
-                setJobs(res.data.savedJobs);
-                dispatch(setSavedJobs(res.data.savedJobs));
+                // Cập nhật danh sách công việc đã lưu trong Redux
+                dispatch(setSavedJobs(res.data.savedJobs || []));
+                console.log('Saved jobs fetched:', res.data.savedJobs?.length || 0);
             }
         } catch (error) {
-            console.log(error);
-            toast.error(error.response?.data?.message || "Failed to get saved jobs");
+            console.error("Failed to fetch saved jobs:", error);
+            toast.error(error.response?.data?.message || "Không thể tải danh sách công việc đã lưu");
         } finally {
             setLoading(false);
         }
     }, [user, dispatch]);
 
-    // Gọi API khi người dùng đã đăng nhập hoặc khi savedJobs thay đổi
+    // Fetch saved jobs when user changes or component mounts
     useEffect(() => {
-        onGetJobs();
-    }, [onGetJobs, savedJobs?.length]);
+        if (user) {
+            fetchSavedJobs();
+        }
+    }, [user, fetchSavedJobs]);
 
-    return { jobs, loading, refetch: onGetJobs };
-}
+    return { loading, refetch: fetchSavedJobs };
+};
 
 export default useGetSavedJobs;

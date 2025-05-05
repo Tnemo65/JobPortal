@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { USER_API_END_POINT } from "@/utils/constant";
 import { setUser } from "@/redux/authSlice";
 import axios from 'axios';
+import api from '@/utils/api';
 
 /**
  * Hook kiểm tra trạng thái đăng nhập khi tải trang
@@ -15,60 +16,46 @@ const useAuthCheck = () => {
 
     useEffect(() => {
         const clearSession = async () => {
-            try {
-                // Gọi API logout để xóa cookie/session phía backend
-                await axios.post(`${USER_API_END_POINT}/logout`, {}, { withCredentials: true });
-            } catch (e) {
-                // Không cần xử lý lỗi logout
-            }
-            // Xóa token/user ở localStorage
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-            // Reset redux user về null
+            // We don't need to manually clear any localStorage tokens anymore
+            // The backend will handle clearing HTTP-only cookies
             dispatch(setUser(null));
         };
 
-        // Luôn xóa phiên đăng nhập cũ khi app khởi động
-        clearSession().finally(() => {
-            setCheckingAuth(false);
-        });
-    }, []);
-
-    useEffect(() => {
         const verifyAuth = async () => {
-            // Nếu đã có user trong Redux store thì không cần kiểm tra nữa
-            // Chỉ kiểm tra khi refresh trang mà không có user trong Redux
-            if (!user) {
-                try {
-                    // Lấy token từ localStorage
-                    const token = localStorage.getItem('token');
-                    
-                    // Chỉ gửi request nếu có token
-                    if (token) {
-                        // Gọi API để kiểm tra xác thực từ token
-                        const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
+            try {
+                // First, try to refresh the token if needed
+                await axios.post(`${USER_API_END_POINT}/refresh-token`, {}, {
+                    withCredentials: true
+                }).catch(() => {
+                    // Ignore errors - just trying to refresh if possible
+                });
+                
+                // Only check auth if we don't already have a user in Redux store
+                if (!user) {
+                    try {
+                        // Call the API to verify auth status using HTTP-only cookies
+                        const res = await api.get(`/user/sso/profile`, {
                             withCredentials: true,
                             headers: {
-                                'Authorization': `Bearer ${token}`,
                                 'Cache-Control': 'no-cache',
                                 'Pragma': 'no-cache'
                             }
                         });
                         
                         if (res.data.success) {
-                            // Cập nhật lại thông tin user vào Redux store
+                            // Update user info in Redux store
                             dispatch(setUser(res.data.user));
                         }
+                    } catch (error) {
+                        console.log("No active session found");
+                        // No action needed - user remains null
                     }
-                } catch (error) {
-                    // Xóa token nếu không hợp lệ
-                    if (error.response?.status === 401) {
-                        localStorage.removeItem('token');
-                    }
-                    console.log("Không có phiên đăng nhập hiện tại");
                 }
+            } catch (error) {
+                console.error("Auth verification error:", error);
+            } finally {
+                setCheckingAuth(false);
             }
-            setCheckingAuth(false);
         };
 
         verifyAuth();

@@ -34,16 +34,28 @@ api.interceptors.response.use(
   async (error) => {
     // Xử lý lỗi authentication (401)
     if (error.response && error.response.status === 401) {
-      // Có thể thêm logic xử lý token hết hạn ở đây nếu cần
       console.log('Authentication error:', error.response.data.code);
       
-      // Nếu lỗi TOKEN_EXPIRED hoặc INVALID_TOKEN, redirect về trang login
+      // Nếu token hết hạn, thử refresh token
       const errorCode = error.response.data.code;
-      if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN') {
-        // Xóa token và thông tin user ở local storage nếu có
-        localStorage.removeItem('user');
-        // Redirect đến trang login nếu cần
-        // window.location.href = '/login';
+      if (errorCode === 'TOKEN_EXPIRED') {
+        try {
+          // Gọi endpoint refresh token
+          await axios.post(`${API_BASE}/user/refresh-token`, {}, {
+            withCredentials: true
+          });
+          
+          // Nếu refresh thành công, thử lại request ban đầu
+          return api(error.config);
+        } catch (refreshError) {
+          console.log('Token refresh failed, redirecting to login');
+          // Redirect to login page
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      } else if (errorCode === 'INVALID_TOKEN' || errorCode === 'JWT_ERROR') {
+        // Redirect đến trang login nếu token không hợp lệ
+        window.location.href = '/login';
       }
     }
     

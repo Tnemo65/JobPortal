@@ -27,6 +27,18 @@ const LatestJobCards = ({job}) => {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + "...";
     };
+
+    // Hàm định dạng tiền lương
+    const formatSalary = (salary) => {
+        if (!salary) return "Thỏa thuận";
+        
+        // Chuyển đổi sang định dạng tiền Việt Nam
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+            maximumFractionDigits: 0
+        }).format(salary);
+    };
     
     return (
         <div 
@@ -70,7 +82,7 @@ const LatestJobCards = ({job}) => {
                         <span>{job?.position || "1"} vị trí</span>
                     </div>
                     <div className="inline-flex items-center text-xs bg-secondary/10 text-primary px-3 py-1 rounded-full">
-                        <span>{job?.salary || "Thỏa thuận"} LPA</span>
+                        <span>{formatSalary(job?.salary)}</span>
                     </div>
                 </div>
                 

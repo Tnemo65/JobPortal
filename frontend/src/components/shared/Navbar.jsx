@@ -6,7 +6,7 @@ import { LogOut, User2, Bell, Search, Menu, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { USER_API_END_POINT } from '@/utils/constant'
-import { setUser } from '@/redux/authSlice'
+import { setUser, setLoading } from '@/redux/authSlice'
 import { toast } from 'sonner'
 import api from '@/utils/api'
 
@@ -69,25 +69,47 @@ const Navbar = () => {
                 setNotifications(prev => prev.map(n => n._id === noti._id ? { ...n, read: true } : n));
             } catch {}
         }
-        if (user && user.role === 'recruiter' && noti.meta && noti.meta.jobId) {
-            navigate(`/admin/jobs/${noti.meta.jobId}/applicants`);
-            setShowNoti(false);
+        
+        // Kiểm tra meta dữ liệu để xác định loại thông báo và điều hướng phù hợp
+        if (user && user.role === 'admin' && noti.meta) {
+            if (noti.meta.jobId && noti.meta.applicantId) {
+                // Đây là thông báo về ứng viên mới, điều hướng đến trang danh sách ứng viên
+                navigate(`/admin/jobs/${noti.meta.jobId}/applicants`);
+                setShowNoti(false);
+            } else if (noti.meta.jobId) {
+                // Nếu chỉ có jobId, điều hướng đến trang chi tiết công việc
+                navigate(`/admin/jobs/${noti.meta.jobId}/applicants`);
+                setShowNoti(false);
+            }
         }
     };
 
     const logoutHandler = async () => {
         try {
-            // Sử dụng API client
+            dispatch(setLoading(true));
+            
+            // Sử dụng API client để gọi endpoint logout
             const res = await api.get(`/user/logout`);
             
             if (res.data.success) {
+                // Reset user state in Redux store
                 dispatch(setUser(null));
+                
+                // Clear any local storage items if they exist (for backward compatibility)
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                
+                // Give feedback to the user
+                toast.success(res.data.message || "Đăng xuất thành công");
+                
+                // Redirect to login page
                 navigate("/");
-                toast.success(res.data.message);
             }
         } catch (error) {
             console.log(error);
             toast.error(error.response?.data?.message || "Logout failed");
+        } finally {
+            dispatch(setLoading(false));
         }
     }
     
@@ -117,7 +139,7 @@ const Navbar = () => {
                 <div className="hidden md:flex items-center gap-10">
                     <ul className="flex font-medium items-center gap-6">
                         {
-                            user && user.role === 'recruiter' ? (
+                            user && user.role === 'admin' ? (
                                 <>
                                     <li>
                                         <Link to="/admin/companies" className="relative group transition-colors duration-200 text-primary-foreground hover:text-accent">
@@ -243,7 +265,7 @@ const Navbar = () => {
                                             </div>
                                             <div className="border-t border-border mt-3 pt-3">
                                                 {
-                                                    user && user.role === 'student' && (
+                                                    user && user.role === 'user' && (
                                                         <Link to="/profile">
                                                             <Button 
                                                                 variant="outline" 
@@ -278,7 +300,7 @@ const Navbar = () => {
                         <div className="container mx-auto px-4">
                             <ul className="flex flex-col gap-5 text-center mb-10">
                                 {
-                                    user && user.role === 'recruiter' ? (
+                                    user && user.role === 'admin' ? (
                                         <>
                                             <li onClick={() => setIsMenuOpen(false)}>
                                                 <Link to="/admin/companies" className="text-xl font-medium text-primary-foreground hover:text-accent transition-colors block py-2">
@@ -336,7 +358,7 @@ const Navbar = () => {
                                     </>
                                 ) : (
                                     <>
-                                        {user.role === 'student' && (
+                                        {user.role === 'user' && (
                                             <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
                                                 <Button variant="outline" className="w-full justify-center gap-2">
                                                     <User2 size={18} />

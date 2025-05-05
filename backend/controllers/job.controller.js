@@ -5,60 +5,73 @@ import { Job } from "../models/job.model.js";
 export const postJob = async (req, res) => {
     try {
         const userId = req.id;
-        const {title, description, salary, location, type, skills, category, company: companyId, position, closingDate } = req.body;
-
+        // Thêm companyId vào destructuring để nhận đúng tên trường từ frontend
+        const {title, description, requirements, salary, location, jobType, experienceLevel, company, companyId, position } = req.body;
+        
+        // Lấy ID công ty từ một trong hai trường (ưu tiên company nếu có)
+        const actualCompanyId = company || companyId;
+        
+        console.log("Job data:", req.body);
+        
         // Xác thực đầu vào
-        if (!title || !description || !location || !type || !category || !companyId) {
+        if (!title || 
+            !description || 
+            !salary || 
+            !location || 
+            !jobType || 
+            !actualCompanyId || 
+            !experienceLevel || 
+            !position) {
             return res.status(400).json({
                 message: "Vui lòng điền đầy đủ thông tin công việc",
                 success: false
             });
         }
 
-        // Kiểm tra tính hợp lệ của một số trường đặc biệt
-        if (closingDate && new Date(closingDate) < new Date()) {
-            return res.status(400).json({
-                message: "Ngày hết hạn phải sau ngày hiện tại",
-                success: false
-            });
-        }
-
-        // Kiểm tra quyền sở hữu công ty
-        const company = await Company.findById(companyId);
-        if (!company) {
+        // Kiểm tra công ty tồn tại
+        const companyData = await Company.findById(actualCompanyId);
+        if (!companyData) {
             return res.status(404).json({
                 message: "Không tìm thấy công ty",
                 success: false
             });
         }
 
-        if (company.created_by.toString() !== userId) {
+        // Kiểm tra quyền - cho phép admin tạo job cho bất kỳ công ty nào
+        const userRole = req.role; // Lấy role từ middleware authentication
+        if (userRole !== 'admin' && companyData.userId.toString() !== userId) {
             return res.status(403).json({
                 message: "Bạn không có quyền đăng tin cho công ty này",
                 success: false
             });
         }
 
-        // Xử lý mảng skills
-        let skillsArray = [];
-        if (skills) {
-            skillsArray = typeof skills === 'string' 
-                ? skills.split(',').map(skill => skill.trim()) 
-                : Array.isArray(skills) ? skills : [];
+        // Xử lý requirements dưới dạng mảng nếu có
+        let requirementsArray = [];
+        if (requirements) {
+            if (typeof requirements === 'string') {
+                requirementsArray = requirements.split(',').map(req => req.trim());
+            } 
+            else if (Array.isArray(requirements)) {
+                requirementsArray = requirements;
+            }
+            else if (typeof requirements === 'object') {
+                // Xử lý trường hợp requirements là object như { '0': 'Đẹp trai' }
+                requirementsArray = Object.values(requirements).filter(Boolean);
+            }
         }
 
         // Tạo công việc mới
         const newJob = await Job.create({
             title,
             description,
-            salary,
+            requirements: requirementsArray,
+            salary: Number(salary),
+            experienceLevel,
             location,
-            type,
-            category,
-            company: companyId,
-            position: position || 1,
-            closingDate,
-            skills: skillsArray,
+            jobType,
+            position: parseInt(position) || 1,
+            company: actualCompanyId,
             created_by: userId
         });
 
@@ -114,19 +127,46 @@ export const getAllJobs = async (req, res) => {
             jobType: 1, 
             position: 1,
             company: 1,
-            createdAt: 1
+            createdAt: 1,
+            created_by: 1 // Thêm trường created_by để biết ai là người tạo job
         };
 
+        // Lấy danh sách công việc từ cơ sở dữ liệu
         const jobs = await Job.find(query, projection)
             .populate({
                 path: "company",
-                select: "name logo website" // Only select needed fields
+                select: "name logo website", // Only select needed fields
             })
-            .sort({ createdAt: -1 })
+            .populate({
+                path: "created_by",
+                select: "role", // Chỉ lấy role của người tạo
+                model: "User" 
+            })
+            .sort({ createdAt: -1 }) // Sắp xếp theo thời gian tạo mới nhất
             .lean(); // Use lean() for better performance
 
+        // Phân loại và sắp xếp công việc: admin lên đầu, sau đó theo thứ tự thời gian
+        const sortedJobs = jobs.sort((a, b) => {
+            // Nếu a là của admin và b không phải, a lên trước
+            if (a.created_by?.role === 'admin' && b.created_by?.role !== 'admin') {
+                return -1;
+            }
+            // Nếu b là của admin và a không phải, b lên trước
+            if (b.created_by?.role === 'admin' && a.created_by?.role !== 'admin') {
+                return 1;
+            }
+            // Nếu cả hai đều là admin hoặc cả hai đều không phải, sắp xếp theo thời gian
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        // Loại bỏ thông tin created_by trước khi gửi về client để bảo mật
+        const sanitizedJobs = sortedJobs.map(job => {
+            const { created_by, ...rest } = job;
+            return rest;
+        });
+
         return res.status(200).json({
-            jobs,
+            jobs: sanitizedJobs,
             success: true
         });
     } catch (error) {
@@ -181,7 +221,7 @@ export const getJobById = async (req, res) => {
     }
 };
 
-// Lấy danh sách công việc của recruiter
+// Lấy danh sách công việc của admin
 export const getAdminJobs = async (req, res) => {
     try {
         const adminId = req.id;

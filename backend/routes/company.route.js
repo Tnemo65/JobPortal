@@ -9,10 +9,11 @@ import { apiCache } from "../utils/redis-cache.js";
 
 const router = express.Router();
 
-// Routes chỉ dành cho nhà tuyển dụng (recruiter)
+// Routes chỉ dành cho admin
 router.route("/register").post(
     isAuthenticated, 
-    checkRole(['recruiter']),
+    checkRole(['admin']),
+    singleUpload, // Added the singleUpload middleware to handle file uploads
     apiLimiter,
     registerCompany
 );
@@ -20,25 +21,42 @@ router.route("/register").post(
 // Cập nhật công ty - kiểm tra quyền sở hữu
 router.route("/update/:id").put(
     isAuthenticated, 
-    checkRole(['recruiter']),
+    checkRole(['admin']),
     checkOwnership('company'),
     singleUpload, 
     apiLimiter,
     updateCompany
 );
 
-// Routes có thể truy cập bởi các vai trò khác nhau - thêm cache 10 phút
+// Get công ty của user hiện tại - support both /get and root path for backwards compatibility
+router.route("/").get(
+    isAuthenticated,
+    checkRole(['admin']),
+    apiLimiter,
+    apiCache.middleware('1 minute'),
+    getCompany
+);
+
 router.route("/get").get(
     isAuthenticated,
+    checkRole(['admin']),
     apiLimiter,
-    apiCache.middleware('10 minutes'),
+    apiCache.middleware('1 minute'),
     getCompany
+);
+
+// Get công ty theo ID - support both /get/:id and /:id for backwards compatibility
+router.route("/:id").get(
+    isAuthenticated,
+    apiLimiter,
+    apiCache.middleware('1 minute'),
+    getCompanyById
 );
 
 router.route("/get/:id").get(
     isAuthenticated,
-    apiLimiter, 
-    apiCache.middleware('5 minutes'),
+    apiLimiter,
+    apiCache.middleware('1 minute'),
     getCompanyById
 );
 

@@ -66,14 +66,24 @@ export const applyJob = async (req, res) => {
         // Xóa cache nếu có
         apiCache.clear(`/api/v1/application/applied/${userId}`);
 
-        // Tạo notification cho recruiter (admin của job)
+        // Tạo notification cho admin của công việc (người đã tạo job)
         const recruiterId = job.created_by;
         // Đếm số lượng ứng viên đã apply vào job này
         const totalApplicants = await Application.countDocuments({ job: job._id });
+        
+        // Thêm thông tin người ứng tuyển để hiển thị chi tiết hơn
+        const applicant = await User.findById(userId).select('fullname email');
+        const applicantName = applicant ? applicant.fullname : 'Một ứng viên';
+        
         await Notification.create({
             user: recruiterId,
-            message: `Có ứng viên mới vừa apply công việc: ${job.title}. Tổng số ứng viên: ${totalApplicants}`,
-            meta: { jobId: job._id, applicantId: userId, totalApplicants }
+            message: `${applicantName} vừa ứng tuyển vào vị trí: ${job.title}. Tổng số ứng viên hiện tại: ${totalApplicants}`,
+            meta: { 
+                jobId: job._id, 
+                applicantId: userId, 
+                totalApplicants,
+                applicationId: newApplication._id  // Thêm ID của đơn ứng tuyển để dễ dàng truy cập
+            }
         });
 
         return res.status(201).json({

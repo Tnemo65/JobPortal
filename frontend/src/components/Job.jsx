@@ -31,6 +31,18 @@ const Job = ({job}) => {
         const timeDifference = currentTime - createdAt;
         return Math.floor(timeDifference/(1000*24*60*60));
     }
+
+    // Hàm định dạng tiền lương
+    const formatSalary = (salary) => {
+        if (!salary) return "Thỏa thuận";
+        
+        // Chuyển đổi sang định dạng tiền Việt Nam
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+            maximumFractionDigits: 0
+        }).format(salary);
+    };
     
     const toggleSaveJob = async () => {
         if (!user) {
@@ -119,7 +131,7 @@ const Job = ({job}) => {
             <div className='flex items-center gap-2 mt-4 flex-wrap'>
                 <Badge className={'text-blue-700 font-bold'} variant="ghost">{job?.position} vị trí</Badge>
                 <Badge className={'text-[#F83002] font-bold'} variant="ghost">{job?.jobType}</Badge>
-                <Badge className={'text-[#7209b7] font-bold'} variant="ghost">{job?.salary} LPA</Badge>
+                <Badge className={'text-[#7209b7] font-bold'} variant="ghost">{formatSalary(job?.salary)}</Badge>
             </div>
             <div className='flex items-center gap-4 mt-4'>
                 <Button 

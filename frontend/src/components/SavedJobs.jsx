@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Navbar from './shared/Navbar'
 import { useSelector } from 'react-redux'
 import Job from './Job'
@@ -9,9 +9,16 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 
 const SavedJobs = () => {
+    // Lấy danh sách công việc đã lưu từ Redux store
     const { savedJobs } = useSelector(store => store.auth);
-    const { loading } = useGetSavedJobs();
+    // Sử dụng hook đã cải tiến để lấy dữ liệu
+    const { loading, refetch } = useGetSavedJobs();
     const navigate = useNavigate();
+
+    // Làm mới danh sách khi component được mount
+    useEffect(() => {
+        refetch(true); // Bypass cache to get fresh data
+    }, []);
 
     return (
         <div>
@@ -20,14 +27,14 @@ const SavedJobs = () => {
                 <div className='flex items-center justify-between mb-6'>
                     <h1 className='font-bold text-2xl flex items-center gap-2'>
                         <Bookmark className="text-accent" />
-                        Saved Jobs ({savedJobs?.length || 0})
+                        Công việc đã lưu ({savedJobs?.length || 0})
                     </h1>
                     <Button 
                         onClick={() => navigate('/jobs')} 
                         variant="outline"
                         className="border-accent text-accent hover:bg-accent/10"
                     >
-                        Browse More Jobs
+                        Tìm thêm việc làm
                     </Button>
                 </div>
 
@@ -53,13 +60,13 @@ const SavedJobs = () => {
                         <div className='mx-auto w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mb-4'>
                             <Bookmark className='h-8 w-8 text-accent' />
                         </div>
-                        <h2 className='text-xl font-bold mb-2'>You haven't saved any jobs yet</h2>
-                        <p className='text-muted-foreground mb-6'>Save jobs that interest you to view them later and track your applications.</p>
+                        <h2 className='text-xl font-bold mb-2'>Bạn chưa lưu công việc nào</h2>
+                        <p className='text-muted-foreground mb-6'>Lưu các công việc yêu thích để xem sau và theo dõi quá trình ứng tuyển của bạn.</p>
                         <Button 
                             onClick={() => navigate('/jobs')}
                             className='bg-accent hover:bg-accent/90'
                         >
-                            Browse Jobs
+                            Tìm việc làm
                         </Button>
                     </div>
                 )}

@@ -58,6 +58,18 @@ const JobDescription = () => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
+    // Hàm định dạng tiền lương
+    const formatSalary = (salary) => {
+        if (!salary) return "Thỏa thuận";
+        
+        // Chuyển đổi sang định dạng tiền Việt Nam
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+            maximumFractionDigits: 0
+        }).format(salary);
+    };
+
     // Hàm xử lý lưu/bỏ lưu công việc với cập nhật UI realtime
     const toggleSaveJob = async () => {
         if (!user) {
@@ -309,7 +321,7 @@ const JobDescription = () => {
                                     </div>
                                     <div>
                                         <p className="text-white/70 text-sm">Salary</p>
-                                        <p className="font-medium">{singleJob?.salary} LPA</p>
+                                        <p className="font-medium">{formatSalary(singleJob?.salary)}</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -495,7 +507,7 @@ const JobDescription = () => {
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-600">Salary</span>
-                                        <span className="font-medium">{singleJob?.salary} LPA</span>
+                                        <span className="font-medium">{formatSalary(singleJob?.salary)}</span>
                                     </div>
                                 </div>
                             </motion.div>
