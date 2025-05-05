@@ -9,6 +9,9 @@ export const basicLimiter = rateLimit({
     max: isDevelopment ? 1000 : 500, // Tăng lên 1000 cho môi trường dev, 500 cho production
     standardHeaders: true, // Trả về thông tin rate limit trong headers
     legacyHeaders: false, // Disable legacy headers
+    validate: false,
+    trustProxy: true, // Enable trust proxy for cloud environments behind load balancers
+
     message: { message: "Quá nhiều yêu cầu, vui lòng thử lại sau.", success: false },
     // Thêm logging để debug trong môi trường development
     skip: (req) => {
@@ -27,6 +30,9 @@ export const authLimiter = rateLimit({
     legacyHeaders: false,
     message: { message: "Quá nhiều yêu cầu đăng nhập, vui lòng thử lại sau 1 giờ.", success: false },
     skipSuccessfulRequests: true, // Không tính các request thành công
+    validate: false,
+    trustProxy: true, // Enable trust proxy for cloud environments behind load balancers
+
 });
 
 // Rate limiter dành riêng cho API
@@ -39,5 +45,8 @@ export const apiLimiter = rateLimit({
     skip: (req) => {
         // Trong môi trường development, bỏ qua rate limit cho frontend localhost
         return isDevelopment && req.headers.origin === 'http://localhost:5173';
-    }
+    },
+    validate: false,
+    trustProxy: true, // Enable trust proxy for cloud environments behind load balancers
+
 });

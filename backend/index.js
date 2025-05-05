@@ -23,6 +23,9 @@ dotenv.config({});
 
 const app = express();
 
+// Enable trust proxy setting for Express to work with Kubernetes and cloud environments
+app.set('trust proxy', true);
+
 // Force set NODE_ENV to production when running on GKE
 if (process.env.KUBERNETES_SERVICE_HOST) {
     console.log("Running in Kubernetes environment - forcing production mode");
@@ -62,9 +65,9 @@ const initApp = async () => {
                 return;
             }
             
-            // Allow requests with no origin (like mobile apps or curl)
+            // Allow requests with no origin (like same-origin requests, mobile apps or curl)
             if (!origin) {
-                console.log('Request with no origin - allowing');
+                console.log('Request with no origin - allowing (same-domain request)');
                 callback(null, true);
                 return;
             }
