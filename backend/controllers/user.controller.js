@@ -18,7 +18,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         httpOnly: true, 
         secure: false, // Set to false for HTTP
         sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
-        path: '/'
+        path: '/',
+        domain: isProduction ? process.env.FRONTEND_URL : undefined // Set domain only in production
     });
     
     // Set refresh token cookie if provided - longer lived (7 days)
@@ -28,7 +29,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
             httpOnly: true, 
             secure: false, // Set to false for HTTP
             sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
-            path: '/' // Allow access from all paths
+            path: '/',
+            domain: isProduction ? process.env.FRONTEND_URL : undefined // Set domain only in production
         });
     }
 };

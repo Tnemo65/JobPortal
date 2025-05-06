@@ -41,7 +41,7 @@ api.interceptors.response.use(
       if (errorCode === 'TOKEN_EXPIRED') {
         try {
           // Gọi endpoint refresh token
-          await axios.post(`${API_BASE}/user/refresh-token`, {}, {
+          await axios.post(`/api/v1/user/refresh-token`, {}, {
             withCredentials: true
           });
           

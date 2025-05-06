@@ -24,7 +24,7 @@ const useAuthCheck = () => {
         const verifyAuth = async () => {
             try {
                 // First, try to refresh the token if needed
-                await axios.post(`${USER_API_END_POINT}/refresh-token`, {}, {
+                await axios.post(`/api/v1/user/refresh-token`, {}, {
                     withCredentials: true
                 }).catch(() => {
                     // Ignore errors - just trying to refresh if possible
