@@ -12,7 +12,6 @@ const AppliedJobTable = () => {
         return dateString.split("T")[0];
     };
 
-    // Hàm xử lý hiển thị trạng thái
     const getStatusBadge = (job) => {
         // Nếu là dữ liệu từ application (có trường status)
         if (job.status) {

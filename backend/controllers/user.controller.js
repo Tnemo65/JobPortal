@@ -33,7 +33,6 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
     }
 };
 
-// Helper function to store refresh token in Redis
 const storeRefreshToken = async (userId, refreshToken) => {
     if (redisClient && redisClient.isReady) {
         // Store in Redis with TTL (7 days)
