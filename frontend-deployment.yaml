@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: frontend
   namespace: default
   annotations:
-    argocd-image-updater.argoproj.io/image-list: backend=gcr.io/empyrean-harbor-456906-s2/backend
+    argocd-image-updater.argoproj.io/image-list: frontend=gcr.io/empyrean-harbor-456906-s2/frontend
     argocd-image-updater.argoproj.io/write-back-method: git
-    argocd-image-updater.argoproj.io/backend.update-strategy: latest
+    argocd-image-updater.argoproj.io/frontend.update-strategy: latest
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: backend
+      app: frontend
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       containers:
-        - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
+        - name: frontend
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 3000
           resources:
             requests:
               cpu: "100m"
@@ -32,87 +32,19 @@ spec:
               memory: "512Mi"
           env:
             - name: PORT
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: PORT
-            - name: NODE_ENV
-              value: "production"
-            - name: DISABLE_SECURE_COOKIES
-              value: "true"
-            - name: SECURE_COOKIES
-              value: "false"
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: SECRET_KEY
-            - name: GOOGLE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: GOOGLE_CLIENT_ID
-            - name: GOOGLE_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: GOOGLE_CLIENT_SECRET
-            - name: MONGO_URI
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: MONGO_URI
-            - name: API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: API_KEY
-            - name: API_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: API_SECRET
-            - name: CLOUD_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: CLOUD_NAME
-            - name: SECRET_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: SECRET_ENCRYPTION_KEY
+              value: "3000"
+            - name: VITE_API_URL
+              value: "http://jobmarket.fun/api/v1"
             - name: BASE_URL
               value: "http://34.81.121.101"
-            - name: FRONTEND_URL
+            - name: NODE_ENV
+              value: "production"
+            - name: VITE_FRONTEND_URL
               value: "http://jobmarket.fun"
-            - name: REDIS_URL
-              value: "redis://10.174.181.3:6379"
-            - name: USE_SHARDING
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: USE_SHARDING
-            - name: USE_REDIS_CACHE
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: USE_REDIS_CACHE
-            - name: USE_REDIS_SESSIONS
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: USE_REDIS_SESSIONS
           readinessProbe:
             httpGet:
-              path: /health
-              port: 8080
+              path: /
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 20
-            periodSeconds: 10
             
