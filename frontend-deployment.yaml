@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: gcr.io/empyrean-harbor-456906-s2/frontend:b91db4eb-144e-434a-acf5-8355517dacb0
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:3e38dee9-ff1b-460b-908c-acc49a5f8f63
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
