@@ -16,15 +16,15 @@ export const setupGKEEnvironment = () => {
       console.log(`Set default FRONTEND_URL: ${process.env.FRONTEND_URL}`);
     }
     
-    if (!process.env.BACKEND_URL) {
-      process.env.BACKEND_URL = 'http://34.81.121.101';
-      console.log(`Set default BACKEND_URL: ${process.env.BACKEND_URL}`);
+    if (!process.env.BASE_URL) {
+      process.env.BASE_URL = 'http://34.81.121.101';
+      console.log(`Set default BASE_URL: ${process.env.BASE_URL}`);
     }
     
     // Force secure cookies off if using HTTP in GKE
     if (process.env.DISABLE_SECURE_COOKIES === 'true' || 
         (!process.env.FRONTEND_URL?.startsWith('https') && 
-         !process.env.BACKEND_URL?.startsWith('https'))) {
+         !process.env.BASE_URL?.startsWith('https'))) {
       process.env.SECURE_COOKIES = 'false';
       console.log("Secure cookies disabled for HTTP connections in GKE");
     } else {

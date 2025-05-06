@@ -34,11 +34,13 @@ spec:
             - name: PORT
               value: "3000"
             - name: VITE_API_URL
-              value: "http://34.81.121.101/api/v1"
-            - name: VITE_BACKEND_URL
+              value: "http://jobmarket.fun/api/v1"
+            - name: BASE_URL
               value: "http://34.81.121.101"
             - name: NODE_ENV
               value: "production"
+            - name: VITE_FRONTEND_URL
+              value: "http://jobmarket.fun"
           readinessProbe:
             httpGet:
               path: /
