@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Xác định callback URL đầy đủ để khớp với authorized redirect URIs trong Google Cloud Console
-const baseURL = process.env.BACKEND_URL || 'http://localhost:8080';
+const baseURL = process.env.BASE_URL || 'http://localhost:5173';
 const callbackURL = `${baseURL}/api/v1/user/auth/google/callback`;
 
 console.log('Using Google OAuth callback URL:', callbackURL);
