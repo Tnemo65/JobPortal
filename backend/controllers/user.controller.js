@@ -11,6 +11,9 @@ import { redisClient } from "../utils/redis-cache.js"; // Import Redis client fo
 const setAuthCookies = (res, accessToken, refreshToken = null) => {
     // Determine if we're in production
     const isProduction = process.env.NODE_ENV === 'production';
+    const cookieDomain = isProduction ? 
+        (new URL(process.env.FRONTEND_URL || 'http://jobmarket.fun').hostname) : 
+        undefined;
     
     // Set access token cookie - short lived (1 hour)
     res.cookie("access_token", accessToken, { 
@@ -19,7 +22,7 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         secure: false, // Set to false for HTTP
         sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
         path: '/',
-        domain: isProduction ? process.env.FRONTEND_URL : undefined // Set domain only in production
+        domain: cookieDomain
     });
     
     // Set refresh token cookie if provided - longer lived (7 days)
@@ -30,7 +33,7 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
             secure: false, // Set to false for HTTP
             sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
             path: '/',
-            domain: isProduction ? process.env.FRONTEND_URL : undefined // Set domain only in production
+            domain: cookieDomain
         });
     }
 };
