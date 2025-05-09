@@ -45,10 +45,6 @@ const initApp = async () => {
             const allowedOrigins = [
                 'http://localhost:5173',
                 'http://localhost:3000',
-                'http://localhost:8000',
-                'http://localhost',
-                'http://35.234.9.125:80',
-                'http://35.234.9.125:5173',
                 'http://35.234.9.125',  // Frontend URL without port
                 'http://34.81.121.101', // Backend URL
                 'http://jobmarket.fun',

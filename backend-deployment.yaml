@@ -83,7 +83,7 @@ spec:
                   name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
             - name: BASE_URL
-              value: "http://34.81.121.101"
+              value: "http://jobmarket.fun"
             - name: FRONTEND_URL
               value: "http://jobmarket.fun"
             - name: REDIS_URL

@@ -538,6 +538,54 @@ kubectl get pods
 kubectl get deployments
 ```
 
+## 🔗 Kết nối các thành phần chính
+
+### Quy trình triển khai ứng dụng
+1. **Developer đẩy mã nguồn lên repository**
+   - Quy trình bắt đầu khi developer đẩy mã nguồn lên một hệ thống quản lý phiên bản như GitHub hoặc GitLab. Đây là điểm khởi đầu để kích hoạt pipeline CI/CD.
+
+2. **Tự động build và triển khai ứng dụng**
+   - Sau khi mã nguồn được đẩy lên, một dịch vụ như Cloud Build sẽ tự động chạy quá trình build, tạo ra Docker image chứa ứng dụng và các phụ thuộc. Image này sau đó được đẩy lên Artifact Registry để lưu trữ.
+   - Tiếp theo, công cụ như ArgoCD sẽ phát hiện image mới, cập nhật các tệp cấu hình (manifest) và triển khai ứng dụng lên GKE (Google Kubernetes Engine). GKE sẽ chạy các container, đảm bảo cân bằng tải và tự động mở rộng khi cần thiết.
+
+### Kết nối Google Cloud Monitoring để giám sát ứng dụng
+- Sau khi ứng dụng được triển khai trên GKE, Google Cloud Monitoring được tích hợp để theo dõi hiệu suất và tình trạng hoạt động.
+- Dịch vụ này thu thập các chỉ số (metrics) như CPU, bộ nhớ, lưu lượng truy cập, cũng như nhật ký (logs) và dấu vết (traces) để cung cấp cái nhìn chi tiết về ứng dụng.
+- Nếu có sự cố, đội ngũ vận hành có thể dựa vào thông tin từ Google Cloud Monitoring để phát hiện và xử lý kịp thời.
+
+### Redis hỗ trợ cache hoặc quản lý session
+- Redis được sử dụng như một cơ sở dữ liệu lưu trữ trong bộ nhớ để tăng tốc độ xử lý.
+  - **Cache dữ liệu**: Lưu trữ tạm thời các kết quả truy vấn hoặc dữ liệu thường xuyên sử dụng, giảm tải cho cơ sở dữ liệu chính.
+  - **Quản lý session**: Lưu thông tin phiên người dùng (session data) để đảm bảo trải nghiệm liền mạch, đặc biệt trong các ứng dụng có nhiều người dùng đồng thời.
+- Việc này giúp ứng dụng phản hồi nhanh hơn và cải thiện hiệu suất tổng thể.
+
+### Cloudinary xử lý media
+- Nếu ứng dụng cần quản lý hình ảnh, video hoặc các nội dung đa phương tiện khác, Cloudinary sẽ được tích hợp để:
+  - Tải lên và lưu trữ tệp media.
+  - Xử lý media (ví dụ: thay đổi kích thước, nén, chuyển đổi định dạng).
+  - Phân phối nội dung qua CDN để tăng tốc độ truy cập.
+- Điều này giúp ứng dụng hoạt động hiệu quả với các tài nguyên đa phương tiện mà không làm tăng tải cho hệ thống chính.
+
+### Redux quản lý trạng thái frontend
+- Ở phía giao diện người dùng (frontend), Redux được sử dụng để quản lý trạng thái ứng dụng, đặc biệt trong các ứng dụng xây dựng bằng React.
+  - **Tổ chức dữ liệu giao diện** một cách tập trung và dễ dự đoán.
+  - **Đồng bộ trạng thái** giữa các thành phần giao diện, đảm bảo tính nhất quán.
+  - **Dễ dàng debug** và mở rộng ứng dụng khi cần.
+- Điều này cải thiện trải nghiệm người dùng và đơn giản hóa việc phát triển frontend.
+
+### JWT đảm bảo xác thực và phân quyền
+- Để bảo mật ứng dụng, JWT (JSON Web Tokens) được triển khai nhằm:
+  - **Xác thực**: Xác minh danh tính người dùng bằng cách tạo token khi đăng nhập, chứa thông tin như ID người dùng và thời hạn hiệu lực.
+  - **Phân quyền**: Kiểm soát quyền truy cập vào các tài nguyên dựa trên vai trò hoặc quyền hạn được mã hóa trong token.
+- JWT hoạt động hiệu quả khi kết hợp với Redis (lưu trữ token để kiểm tra nhanh) và đảm bảo chỉ người dùng hợp lệ mới sử dụng được ứng dụng.
+
+### Tóm tắt cách các thành phần kết nối
+- **Google Cloud Monitoring**: Giám sát toàn bộ ứng dụng sau khi triển khai trên GKE, cung cấp dữ liệu để tối ưu hóa và xử lý sự cố.
+- **Redis**: Tăng tốc ứng dụng bằng cách cache dữ liệu hoặc quản lý session, hỗ trợ backend hoạt động hiệu quả.
+- **Cloudinary**: Xử lý và phân phối media, giảm tải cho hệ thống chính và tối ưu trải nghiệm người dùng.
+- **Redux**: Quản lý trạng thái frontend, đảm bảo giao diện hoạt động mượt mà và nhất quán.
+- **JWT**: Bảo mật ứng dụng thông qua xác thực và phân quyền, kết hợp với Redis để kiểm tra token nhanh chóng.
+
 ## 📋 Yêu cầu hệ thống
 
 - Node.js phiên bản 18 trở lên
