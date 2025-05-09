@@ -1,7 +1,5 @@
 # JobPortal - Nền tảng tìm việc làm trực tuyến với CI/CD DevOps
 
-![Job Portal Banner](https://via.placeholder.com/1200x300/48A6A7/FFFFFF?text=JobPortal)
-
 ## 📚 Giới thiệu
 
 JobPortal là nền tảng tìm việc làm toàn diện được phát triển bằng MERN Stack (MongoDB, Express, React, Node.js), giúp kết nối ứng viên tìm việc và nhà tuyển dụng một cách hiệu quả. Nền tảng này được triển khai theo mô hình DevOps hiện đại với quy trình CI/CD tự động hóa hoàn toàn trên Google Cloud Platform.
@@ -50,7 +48,7 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 
 ### DevOps & Cloud Infrastructure
 - **Docker**: Container hóa ứng dụng để đảm bảo nhất quán giữa các môi trường
-- **GitHub/GitLab**: Quản lý mã nguồn, version control và trigger CI/CD
+- **GitHub**: Quản lý mã nguồn, version control và trigger CI/CD
 - **Google Cloud Build**: Dịch vụ CI/CD tự động build Docker images
 - **Artifact Registry**: Kho lưu trữ Docker images bảo mật và quản lý version
 - **Google Kubernetes Engine (GKE)**: Quản lý, triển khai và mở rộng container
@@ -58,7 +56,6 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 - **Cloud Load Balancing**: Phân phối lưu lượng truy cập ứng dụng
 - **Domain Name (jobmarket.fun)**: Cung cấp địa chỉ dễ nhớ cho người dùng
 - **Horizontal Pod Autoscaler**: Tự động scale pods dựa vào tải hệ thống
-- **Network Policies**: Bảo mật mạng giữa các services trong Kubernetes
 - **Ingress Controller**: Quản lý truy cập vào các services từ bên ngoài cluster
 
 ## 🚢 DevOps Workflow & Triển khai
@@ -71,46 +68,7 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 
 ### Hướng dẫn triển khai chi tiết
 
-#### Bước 0: Kiểm tra công nghệ hiện tại
-
-Trước khi bắt đầu, hãy kiểm tra những công nghệ đã được áp dụng:
-
-```bash
-# Kiểm tra Google Cloud project ID
-gcloud config list project
-
-# Kiểm tra cấu hình Cloud Build
-ls -la cloudbuild.yaml
-
-# Kiểm tra cluster GKE
-gcloud container clusters list
-
-# Kiểm tra ArgoCD
-kubectl get pods -n argocd
-
-# Kiểm tra Artifact Registry
-gcloud artifacts repositories list
-```
-
-#### Bước 1: Thiết lập GitHub/GitLab Repository
-
-1. **Tạo repository** (nếu chưa có):
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/your-username/JobPortal.git
-git push -u origin main
-```
-
-2. **Thiết lập webhook** để trigger Cloud Build khi có push:
-
-```bash
-# Lấy webhook URL từ Cloud Build
-gcloud builds triggers list
-```
+#### Bước 1: Thiết lập GitHub Repository
 
 #### Bước 2: Cấu hình Cloud Build
 
@@ -504,40 +462,6 @@ kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
 - Username: `admin`
 - Password: `prom-operator`
 
-#### Bước 8: Test CI/CD Pipeline
-
-1. **Thay đổi mã nguồn**:
-
-```bash
-# Thực hiện một thay đổi nhỏ
-echo '// Thay đổi mới' >> frontend/src/App.jsx
-
-# Commit và push
-git add frontend/src/App.jsx
-git commit -m "Test CI/CD pipeline"
-git push origin main
-```
-
-2. **Theo dõi quá trình build**:
-
-```bash
-# Xem Cloud Build logs
-gcloud builds list
-
-# Theo dõi trạng thái ArgoCD
-argocd app get jobportal
-```
-
-3. **Kiểm tra triển khai**:
-
-```bash
-# Kiểm tra pods
-kubectl get pods
-
-# Kiểm tra ứng dụng sẵn sàng
-kubectl get deployments
-```
-
 ## 🔗 Kết nối các thành phần chính
 
 ### Quy trình triển khai ứng dụng
@@ -611,12 +535,3 @@ Dự án áp dụng nhiều biện pháp bảo mật:
 - Secrets quản lý bằng Kubernetes Secrets
 - HTTPS với TLS termination tại Load Balancer
 
-## 📧 Liên hệ
-
-Nếu có bất kỳ câu hỏi hoặc đề xuất nào về quy trình DevOps, vui lòng liên hệ:
-
-Email: your-email@example.com
-
----
-
-&copy; 2025 JobPortal. Developed with ❤️ by Your Team.
