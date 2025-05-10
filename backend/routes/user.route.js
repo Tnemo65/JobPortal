@@ -25,6 +25,8 @@ const oauthDebugMiddleware = (req, res, next) => {
     console.log('OAuth Debug - Request cookies:', req.cookies);
     console.log('OAuth Debug - Request query:', req.query);
     console.log('OAuth Debug - Request path:', req.path);
+    console.log('OAuth Debug - Request origin:', req.headers.origin || 'No origin');
+    console.log('OAuth Debug - Request referer:', req.headers.referer || 'No referer');
     
     // Đặt thêm thông tin vào req để sử dụng sau này
     req.oauthDebug = {
@@ -35,15 +37,53 @@ const oauthDebugMiddleware = (req, res, next) => {
     next();
 };
 
+// Test route for OAuth configuration
+router.route("/auth/test").get((req, res) => {
+    const callbackUrl = process.env.OAUTH_CALLBACK_URL || 'http://jobmarket.fun/api/v1/user/auth/google/callback';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    const googleClientId = process.env.GOOGLE_CLIENT_ID ? "Configured" : "Not configured";
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ? "Configured" : "Not configured";
+    
+    return res.status(200).json({
+        message: "OAuth configuration test",
+        callbackUrl,
+        frontendUrl,
+        googleClientId,
+        googleClientSecret,
+        environment: process.env.NODE_ENV || 'production',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Route đăng nhập Google OAuth - không sử dụng session để tránh vấn đề với cookie
 router.route("/auth/google").get(
     oauthDebugMiddleware,
     (req, res, next) => {
         console.log("Starting Google auth flow");
-        // Thêm state để kiểm tra CSRF
-        const state = Math.random().toString(36).substring(2, 15);
-        req.session.oauthState = state;
-        next();
+        try {
+            // Tạo và lưu state parameter để ngăn CSRF attacks
+            const state = Math.random().toString(36).substring(2, 15);
+            
+            // Lưu state vào session hoặc cookie nếu có thể
+            if (req.session) {
+                req.session.oauthState = state;
+                console.log("Saved OAuth state to session:", state);
+            } else {
+                // Fallback to cookie if session is not available
+                res.cookie("oauth_state", state, { 
+                    maxAge: 10 * 60 * 1000, // 10 minutes
+                    httpOnly: true, 
+                    secure: false, // Must be false for HTTP
+                    sameSite: 'lax'
+                });
+                console.log("Saved OAuth state to cookie:", state);
+            }
+            
+            next();
+        } catch (error) {
+            console.error("Error setting up Google auth:", error);
+            res.status(500).send("Error starting authentication process");
+        }
     },
     passport.authenticate('google', { 
         scope: ['profile', 'email'],
@@ -58,46 +98,72 @@ router.route("/auth/google/callback").get(
     (req, res, next) => {
         console.log("Received Google auth callback with query params:", req.query);
         
-        // Kiểm tra xem có code trong query params không
-        if (!req.query.code) {
-            console.error('No auth code received from Google');
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('No authentication code received from Google')}`);
-        }
+        // Lấy frontend URL từ environment
+        const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
         
-        // Decode HTML entities trong auth code
-        if (req.query.code && typeof req.query.code === 'string') {
-            const originalCode = req.query.code;
-            req.query.code = he.decode(req.query.code);
-            console.log('Decoded auth code:', originalCode.length, '->', req.query.code.length);
+        try {
+            // Kiểm tra state nếu có để ngăn CSRF attacks
+            const savedState = req.session?.oauthState || req.cookies?.oauth_state;
+            const receivedState = req.query.state;
             
-            // Kiểm tra nếu code chứa HTML entities hoặc ký tự đặc biệt
-            if (originalCode.includes('&#x')) {
-                console.log('Original code contains HTML entities, decoded now');
+            if (savedState && receivedState && savedState !== receivedState) {
+                console.error('State mismatch in OAuth callback. Possible CSRF attempt.');
+                return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('Security verification failed')}`);
             }
             
-            // Hiển thị 10 ký tự đầu tiên để kiểm tra (không hiển thị toàn bộ vì lý do bảo mật)
-            console.log('First few chars of code:', originalCode.substring(0, 10) + '... -> ' + req.query.code.substring(0, 10) + '...');
+            // Kiểm tra xem có code trong query params không
+            if (!req.query.code) {
+                console.error('No auth code received from Google');
+                return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('No authentication code received from Google')}`);
+            }
+            
+            // Xóa state sau khi kiểm tra
+            if (req.session?.oauthState) {
+                delete req.session.oauthState;
+            }
+            if (req.cookies?.oauth_state) {
+                res.clearCookie('oauth_state');
+            }
+            
+            // Decode HTML entities trong auth code
+            if (req.query.code && typeof req.query.code === 'string') {
+                const originalCode = req.query.code;
+                req.query.code = he.decode(req.query.code);
+                console.log('Decoded auth code:', originalCode.length, '->', req.query.code.length);
+                
+                // Kiểm tra nếu code chứa HTML entities hoặc ký tự đặc biệt
+                if (originalCode.includes('&#x')) {
+                    console.log('Original code contains HTML entities, decoded now');
+                }
+                
+                // Hiển thị 10 ký tự đầu tiên để kiểm tra (không hiển thị toàn bộ vì lý do bảo mật)
+                console.log('First few chars of code:', originalCode.substring(0, 10) + '... -> ' + req.query.code.substring(0, 10) + '...');
+            }
+            
+            // Chuyển tiếp xử lý cho Passport
+            passport.authenticate('google', { 
+                session: false,
+                failureRedirect: '/api/v1/user/auth/failure'
+            }, (err, user, info) => {
+                if (err) {
+                    console.error('Google auth callback error:', err);
+                    return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent(err.message || 'Authentication failed')}`);
+                }
+                
+                if (!user) {
+                    console.error('No user returned from Google auth');
+                    return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('User authentication failed')}`);
+                }
+                
+                console.log('Google auth successful for user:', user.email);
+                req.user = user;
+                next();
+            })(req, res, next);
+            
+        } catch (error) {
+            console.error('Unhandled error in auth callback:', error);
+            return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('An unexpected error occurred')}`);
         }
-        
-        // Chuyển tiếp xử lý cho Passport
-        passport.authenticate('google', { 
-            session: false,
-            failureRedirect: '/api/v1/user/auth/failure'
-        }, (err, user, info) => {
-            if (err) {
-                console.error('Google auth callback error:', err);
-                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent(err.message || 'Authentication failed')}`);
-            }
-            
-            if (!user) {
-                console.error('No user returned from Google auth');
-                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('User authentication failed')}`);
-            }
-            
-            console.log('Google auth successful for user:', user.email);
-            req.user = user;
-            next();
-        })(req, res, next);
     },
     ssoAuthSuccess
 );

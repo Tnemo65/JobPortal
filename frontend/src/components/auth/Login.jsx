@@ -78,8 +78,19 @@ const Login = () => {
     };
 
     const handleGoogleLogin = () => {
-        const redirectUrl = `${USER_API_END_POINT}/auth/google`;
-        window.location.href = redirectUrl;
+        try {
+            toast.info("Đang chuyển hướng đến đăng nhập Google...");
+            console.log("Redirecting to Google OAuth:", `${USER_API_END_POINT}/auth/google`);
+            const redirectUrl = `${USER_API_END_POINT}/auth/google`;
+            
+            // Add a brief delay for the toast to show
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 500);
+        } catch (error) {
+            console.error("Google login redirect error:", error);
+            toast.error("Không thể kết nối đến dịch vụ đăng nhập Google");
+        }
     }
 
     useEffect(() => {

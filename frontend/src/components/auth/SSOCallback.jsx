@@ -35,8 +35,15 @@ const SSOCallback = () => {
                 
                 if (success === 'true') {
                     // Small delay to ensure cookies are properly set
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Further increased delay for cookie setting
                     
+                    // Log cookie status for debugging
+                    console.log('Cookies available:', document.cookie ? 'Yes' : 'No');
+                    console.log('API endpoint:', `${USER_API_END_POINT}/sso/profile`);
+                    console.log('USER_API_END_POINT:', USER_API_END_POINT);
+                    console.log('Making profile request to:', `${USER_API_END_POINT}/sso/profile`);
+                    console.log('Cookie status:', document.cookie ? 'Cookies present' : 'No cookies');
+    
                     // Get user profile using the cookies that were set
                     const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
                         withCredentials: true, // Important for cookies
@@ -79,6 +86,12 @@ const SSOCallback = () => {
                     toast.error("Quá thời gian kết nối. Vui lòng thử lại sau.");
                 } else {
                     toast.error(err.response?.data?.message || err.message || 'Đăng nhập không thành công');
+                    
+                    // If unauthorized, could be a CORS or cookie issue
+                    if (err.response?.status === 401) {
+                        console.error('Authentication failed - cookies may not be properly set');
+                        console.log('Cookie settings issue detected');
+                    }
                 }
                 
                 setStatus('error');

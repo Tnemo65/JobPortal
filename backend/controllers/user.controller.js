@@ -304,14 +304,27 @@ export const logout = async (req, res) => {
 
 // SSO Authentication success handler
 export const ssoAuthSuccess = async (req, res) => {
+    // Đảm bảo response headers chưa được gửi
+    if (res.headersSent) {
+        console.error('Headers already sent in ssoAuthSuccess');
+        return;
+    }
+    
+    const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    console.log('Using frontend URL for redirect:', frontendURL);
+    
     try {
         const user = req.user;
         if (!user) {
             console.error('No user data in SSO success handler');
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/sso-callback?success=false&error=${encodeURIComponent('Authentication failed: No user data')}`);
+            return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('Authentication failed: No user data')}`);
         }
         
         console.log('Google SSO authentication successful for user:', user.email);
+        
+        // Kiểm tra request ID
+        const requestId = req.headers['x-request-id'] || Math.random().toString(36).substring(2, 15);
+        console.log(`Processing SSO login (request ID: ${requestId}) for user: ${user.email}`);
         
         // Clear any existing tokens for this user before creating new ones
         await clearRefreshToken(user._id);
@@ -319,8 +332,32 @@ export const ssoAuthSuccess = async (req, res) => {
         // Generate both access and refresh tokens
         const { accessToken, refreshToken } = await generateTokens(user._id);
         
-        // Set cookies only
-        setAuthCookies(res, accessToken, refreshToken);
+        // Set cookies only - thêm domain nếu cần
+        const cookieOptions = {
+            httpOnly: true, 
+            secure: false, // Must be false for HTTP
+            sameSite: 'lax', // Tốt nhất cho SSO cross-site
+            path: '/'
+        };
+        
+        // Thêm domain option khi sử dụng domain tùy chỉnh
+        if (process.env.COOKIE_DOMAIN) {
+            cookieOptions.domain = process.env.COOKIE_DOMAIN;
+        }
+        
+        console.log(`Setting auth cookies for domain: ${process.env.COOKIE_DOMAIN || 'default'}`);
+        
+        // Set access token cookie - thời gian ngắn (1 giờ)
+        res.cookie("access_token", accessToken, { 
+            ...cookieOptions,
+            maxAge: 60 * 60 * 1000, // 1 giờ
+        });
+        
+        // Set refresh token cookie - thời gian dài (7 ngày)
+        res.cookie("refresh_token", refreshToken, { 
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+        });
         
         // Track login
         await storeRefreshToken(user._id);
@@ -336,23 +373,50 @@ export const ssoAuthSuccess = async (req, res) => {
         };
 
         // Log successful SSO login
-        console.log(`SSO login successful: ${userData.email} (${userData._id}), role: ${userData.role}`);
+        console.log(`SSO login successful (request ID: ${requestId}): ${userData.email} (${userData._id}), role: ${userData.role}`);
+        
+        // Kiểm tra lại status của response trước khi redirect
+        if (res.headersSent) {
+            console.error('Headers already sent before redirect');
+            return;
+        }
         
         // Redirect to frontend WITHOUT token in URL params - we're using cookies only
-        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
         return res.redirect(`${frontendURL}/sso-callback?success=true`);
     } catch (error) {
         console.error('SSO auth success error:', error);
-        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-        res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent(error.message || 'Authentication failed')}`);
+        return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent(error.message || 'Authentication failed')}`);
     }
 };
 
 // SSO Authentication failure handler
 export const ssoAuthFailure = (req, res) => {
-    console.error('Google SSO authentication failed');
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent('Authentication failed')}`);
+    // Đảm bảo response headers chưa được gửi
+    if (res.headersSent) {
+        console.error('Headers already sent in ssoAuthFailure');
+        return;
+    }
+    
+    const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    
+    // Log thông tin chi tiết hơn về lỗi
+    const error = req.query.error || 'Unknown error';
+    const errorDescription = req.query.error_description || 'No error description available';
+    
+    console.error('Google SSO authentication failed:', {
+        error,
+        errorDescription,
+        requestId: req.headers['x-request-id'] || 'no-request-id',
+        userAgent: req.headers['user-agent']
+    });
+    
+    // Xóa mọi cookies có thể đã được thiết lập trong quá trình xác thực
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
+    
+    // Redirect về frontend với thông tin lỗi
+    const errorMessage = error === 'Unknown error' ? 'Authentication failed' : `${error}: ${errorDescription}`;
+    return res.redirect(`${frontendURL}/sso-callback?success=false&error=${encodeURIComponent(errorMessage)}`);
 };
 
 // Get user profile after SSO login

@@ -17,12 +17,20 @@ spec:
       labels:
         app: backend
     spec:
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
       containers:
         - name: backend
           image: gcr.io/empyrean-harbor-456906-s2/backend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
           resources:
             requests:
               cpu: "100m"
@@ -91,6 +99,15 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: USE_SHARDING
+            - name: OAUTH_CALLBACK_URL
+              value: "http://jobmarket.fun/api/v1/user/auth/google/callback"
+            - name: COOKIE_DOMAIN
+              value: "jobmarket.fun"
+            - name: REFRESH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
           readinessProbe:
             httpGet:
               path: /health

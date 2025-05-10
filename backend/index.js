@@ -31,9 +31,9 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 
 // Initialize app and DB connection without session configuration first
 const initApp = async () => {
-    console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
-    console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-    console.log(`Backend URL: ${process.env.BASE_URL || 'http://localhost:3000'}`);
+    console.log(`Starting server in ${process.env.NODE_ENV || 'production'} mode`);
+    console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://jobmarket.fun'}`);
+    console.log(`Backend URL: ${process.env.BASE_URL || 'http://34.81.121.101'}`);
 
     // Configure CORS first - before ANY other middleware
     const corsOptions = {
@@ -49,7 +49,7 @@ const initApp = async () => {
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With'],
-        exposedHeaders: ['Set-Cookie'], // Expose Set-Cookie header để cho phép cookies được thiết lập
+        exposedHeaders: ['Set-Cookie'], 
         maxAge: 86400, // 24 hours in seconds
         preflightContinue: false // Ngăn chặn OPTIONS request tiếp tục đến route handler
     };
@@ -119,6 +119,15 @@ const initApp = async () => {
         }
         next(err);
     });
+    
+    // Add test route for Google OAuth callback URL verification
+    app.get('/api/v1/auth-test', (req, res) => {
+        res.status(200).json({
+            message: 'Auth routes are working correctly',
+            callbackUrl: process.env.OAUTH_CALLBACK_URL || 'http://jobmarket.fun/api/v1/user/auth/google/callback',
+            timestamp: new Date().toISOString()
+        });
+    });
 
     // Apply basic rate limiter with less restrictive settings during development
     const isProduction = process.env.NODE_ENV === 'production';
@@ -128,7 +137,7 @@ const initApp = async () => {
         // More permissive rate limiting during development
         app.use((req, res, next) => {
             // Check if the request is from development environment
-            if (req.headers.origin === 'http://localhost:5173') {
+            if (req.headers.origin === 'http://jobmarket.fun') {
                 // Skip rate limiting for development requests
                 return next();
             }
@@ -146,7 +155,9 @@ const initApp = async () => {
             secure: false, // Luôn sử dụng false cho HTTP
             httpOnly: true, // Prevent client-side JS from reading the cookie
             sameSite: 'lax', // Sử dụng lax để hoạt động tốt với HTTP
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
+
         },
         // Giúp tránh lỗi session khi có nhiều request cùng lúc
         rolling: true,

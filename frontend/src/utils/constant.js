@@ -1,7 +1,7 @@
 // Production vs Development API endpoints
 const API_BASE = import.meta.env.VITE_API_URL || 
   (import.meta.env.PROD 
-    ? "http://34.81.121.101/api/v1"
+    ? "http://jobmarket.fun/api/v1"
     : "http://localhost:8080/api/v1");
 
 // Expose this for other imports

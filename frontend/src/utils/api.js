@@ -19,9 +19,10 @@ const onTokenRefreshed = (error = null) => {
 // Create axios instance with basic configuration for HTTP-only cookie auth
 const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, // Critical: This allows cookies to be sent with CORS requests
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache'
   }
 });
 
