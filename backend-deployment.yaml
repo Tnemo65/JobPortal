@@ -23,13 +23,13 @@ spec:
             name: nginx-config
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
+          image: gcr.io/empyrean-harbor-456906-s2/backend:21d2ea21-033e-4708-801f-23ae80f95f94
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
           volumeMounts:
             - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
+              mountPath: D:\GitHub\JobPortal\frontend\nginx.conf
               subPath: nginx.conf
           resources:
             requests:
