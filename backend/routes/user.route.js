@@ -219,25 +219,23 @@ router.route("/refresh-token").post(async (req, res) => {
         }
         
         // Generate new access token
-        const accessToken = jwt.sign(
-            { userId: decoded.userId },
-            process.env.SECRET_KEY,
+        const accessToken = await jwt.sign(
+            { userId: decoded.userId }, 
+            process.env.SECRET_KEY, 
             { expiresIn: '1h' }
         );
         
-        console.log("Generated new access token for user:", decoded.userId);
-        
-        console.log("Setting new HTTP-only cookie for access token");
-        
-        // Set the new access token in a cookie - simplified for HTTP
-        res.cookie("access_token", accessToken, {
-            maxAge: 60 * 60 * 1000, // 1 hour
+        // Set the new access token as an HTTP-only cookie
+        const cookieOptions = {
             httpOnly: true,
             secure: false, // Must be false for HTTP
-            sameSite: 'lax', // Best setting for HTTP
-            path: '/'
-        });
+            sameSite: 'lax',
+            path: '/',
+            domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun',
+            maxAge: 60 * 60 * 1000 // 1 hour
+        };
         
+        res.cookie("access_token", accessToken, cookieOptions);
         // No token in response body - only cookies
         return res.status(200).json({
             message: "Token refreshed successfully",

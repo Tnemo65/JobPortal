@@ -36,15 +36,29 @@ const initApp = async () => {
     console.log(`Backend URL: ${process.env.BASE_URL || 'http://34.81.121.101'}`);
 
     // Configure CORS first - before ANY other middleware
-    const corsOptions = {
-        origin: function(origin, callback) {
-            console.log('CORS Request from origin:', origin || 'no origin');
-            
-            // Luôn cho phép tất cả các origins khi sử dụng HTTP
-            // Điều này giúp cookie hoạt động đúng cách trong môi trường không có HTTPS
-            console.log('Cho phép tất cả các origins để HTTP-only cookies hoạt động');
+const corsOptions = {
+    origin: function(origin, callback) {
+        console.log('CORS Request from origin:', origin || 'no origin');
+        
+        // Instead of allowing all origins, specify allowed domains
+        const allowedOrigins = [
+            'http://jobmarket.fun',
+            'https://jobmarket.fun',
+            'http://www.jobmarket.fun',
+            'https://www.jobmarket.fun',
+            // Include for local development if needed
+            'http://localhost:5173'
+        ];
+        
+        // Check if origin is in allowed list or undefined (for same-origin requests)
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
-        },
+            console.log(`CORS allowed for origin: ${origin || 'same-origin'}`);
+        } else {
+            console.log(`CORS blocked for origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
         credentials: true, // Quan trọng: Bắt buộc cho việc gửi/nhận cookies
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -156,7 +170,8 @@ const initApp = async () => {
             httpOnly: true, // Prevent client-side JS from reading the cookie
             sameSite: 'lax', // Sử dụng lax để hoạt động tốt với HTTP
             maxAge: 24 * 60 * 60 * 1000, // 1 day
-            domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
+            domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun',
+            path: '/' // Ensure cookies are sent for all paths
 
         },
         // Giúp tránh lỗi session khi có nhiều request cùng lúc
@@ -198,6 +213,17 @@ const initApp = async () => {
     app.use("/api/v1/job", jobRoute);
     app.use("/api/v1/application", applicationRoute);
     app.use("/api/v1/test", testRoutes);
+
+    // Add a catch-all route for debugging
+app.get("/api/v1/*", (req, res) => {
+  res.status(200).json({
+    message: "API route accessed but not found",
+    path: req.originalUrl,
+    params: req.params,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
     // Add a final catch-all CORS handler for any routes that might be missed
     app.use('*', (req, res, next) => {
         res.header("Access-Control-Allow-Origin", req.headers.origin || "*");

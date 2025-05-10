@@ -35,8 +35,11 @@ const SSOCallback = () => {
                 
                 if (success === 'true') {
                     // Small delay to ensure cookies are properly set
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Further increased delay for cookie setting
-                    
+                // Add delay to ensure cookies are set before making request
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                console.log('Making profile request with credentials');
+                
                     // Log cookie status for debugging
                     console.log('Cookies available:', document.cookie ? 'Yes' : 'No');
                     console.log('API endpoint:', `${USER_API_END_POINT}/sso/profile`);

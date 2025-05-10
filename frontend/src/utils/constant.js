@@ -14,7 +14,7 @@ export const COMPANY_API_END_POINT = `${API_BASE}/company`;
 
 // Frontend URL for redirects
 export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 
-  (import.meta.env.PROD ? "http://35.234.9.125" : "http://localhost:5173");
+  (import.meta.env.PROD ? "http://jobmarket.fun" : "http://localhost:5173");
 
 // Authentication endpoints
 export const GOOGLE_AUTH_URL = `${USER_API_END_POINT}/auth/google`;

@@ -8,8 +8,6 @@ import { Notification } from "../models/notification.model.js"; // Import Notifi
 
 // Helper function to set auth cookies
 const setAuthCookies = (res, accessToken, refreshToken = null) => {
-    // Simple cookie configuration for HTTP (non-HTTPS) use
-    // No domain needed for basic HTTP operation
     
     console.log('Setting HTTP-only cookies for authentication tokens');
     
@@ -19,7 +17,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         httpOnly: true, 
         secure: false, // Must be false for HTTP
         sameSite: 'lax', // Best setting for HTTP
-        path: '/'
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
     });
     
     // Set refresh token cookie if provided - longer lived (7 days)
@@ -29,7 +28,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
             httpOnly: true, 
             secure: false, // Must be false for HTTP
             sameSite: 'lax', // Best setting for HTTP
-            path: '/'
+            path: '/',
+            domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
         });
     }
 };
