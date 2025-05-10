@@ -60,11 +60,11 @@ const Login = () => {
         try {
             dispatch(setLoading(true));
             
-            // Log in using our API utility which sends cookies automatically
+            // Use our HTTP-only cookie authentication
             const res = await api.post('/user/login', input);
             
             if (res.data.success) {
-                // Just update Redux with user info - token is handled by HTTP-only cookies
+                // Store only user info in Redux - authentication is handled by HTTP-only cookies
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message);
                 navigate("/");

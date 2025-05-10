@@ -44,7 +44,6 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 - **Bcrypt**: Mã hóa mật khẩu
 - **Multer**: Xử lý upload file
 - **Cloudinary**: Lưu trữ hình ảnh và file
-- **Redis**: Cache và quản lý phiên làm việc
 - **Passport.js**: Xác thực với các dịch vụ của bên thứ ba
 - **Express Rate Limit**: Giới hạn request để ngăn chặn tấn công
 
@@ -404,7 +403,6 @@ type: Opaque
 data:
   MONGODB_URI: <base64-encoded-mongodb-uri>
   JWT_SECRET: <base64-encoded-jwt-secret>
-  REDIS_URL: <base64-encoded-redis-url>
   CLOUD_NAME: <base64-encoded-cloud-name>
   CLOUD_API_KEY: <base64-encoded-api-key>
   CLOUD_API_SECRET: <base64-encoded-api-secret>
@@ -553,10 +551,10 @@ kubectl get deployments
 - Dịch vụ này thu thập các chỉ số (metrics) như CPU, bộ nhớ, lưu lượng truy cập, cũng như nhật ký (logs) và dấu vết (traces) để cung cấp cái nhìn chi tiết về ứng dụng.
 - Nếu có sự cố, đội ngũ vận hành có thể dựa vào thông tin từ Google Cloud Monitoring để phát hiện và xử lý kịp thời.
 
-### Redis hỗ trợ cache hoặc quản lý session
-- Redis được sử dụng như một cơ sở dữ liệu lưu trữ trong bộ nhớ để tăng tốc độ xử lý.
+### Memory Cache hỗ trợ tăng tốc ứng dụng
+- Sử dụng memory cache để tăng tốc độ xử lý API đồng thời giảm tải cho database.
   - **Cache dữ liệu**: Lưu trữ tạm thời các kết quả truy vấn hoặc dữ liệu thường xuyên sử dụng, giảm tải cho cơ sở dữ liệu chính.
-  - **Quản lý session**: Lưu thông tin phiên người dùng (session data) để đảm bảo trải nghiệm liền mạch, đặc biệt trong các ứng dụng có nhiều người dùng đồng thời.
+  - **Quản lý session**: Lưu thông tin phiên người dùng (session data) trong memory để đảm bảo trải nghiệm liền mạch.
 - Việc này giúp ứng dụng phản hồi nhanh hơn và cải thiện hiệu suất tổng thể.
 
 ### Cloudinary xử lý media
@@ -577,20 +575,21 @@ kubectl get deployments
 - Để bảo mật ứng dụng, JWT (JSON Web Tokens) được triển khai nhằm:
   - **Xác thực**: Xác minh danh tính người dùng bằng cách tạo token khi đăng nhập, chứa thông tin như ID người dùng và thời hạn hiệu lực.
   - **Phân quyền**: Kiểm soát quyền truy cập vào các tài nguyên dựa trên vai trò hoặc quyền hạn được mã hóa trong token.
-- JWT hoạt động hiệu quả khi kết hợp với Redis (lưu trữ token để kiểm tra nhanh) và đảm bảo chỉ người dùng hợp lệ mới sử dụng được ứng dụng.
+- JWT được lưu trữ hoàn toàn trong HTTP-only cookies để đảm bảo an toàn tối đa, ngăn chặn các cuộc tấn công XSS.
+- Hệ thống sử dụng cơ chế refresh token để duy trì phiên người dùng mà không yêu cầu đăng nhập lại thường xuyên.
 
 ### Tóm tắt cách các thành phần kết nối
 - **Google Cloud Monitoring**: Giám sát toàn bộ ứng dụng sau khi triển khai trên GKE, cung cấp dữ liệu để tối ưu hóa và xử lý sự cố.
-- **Redis**: Tăng tốc ứng dụng bằng cách cache dữ liệu hoặc quản lý session, hỗ trợ backend hoạt động hiệu quả.
+- **Memory Cache**: Tăng tốc ứng dụng bằng cách cache dữ liệu và quản lý session trong bộ nhớ, hỗ trợ backend hoạt động hiệu quả.
 - **Cloudinary**: Xử lý và phân phối media, giảm tải cho hệ thống chính và tối ưu trải nghiệm người dùng.
 - **Redux**: Quản lý trạng thái frontend, đảm bảo giao diện hoạt động mượt mà và nhất quán.
-- **JWT**: Bảo mật ứng dụng thông qua xác thực và phân quyền, kết hợp với Redis để kiểm tra token nhanh chóng.
+- **JWT**: Bảo mật ứng dụng thông qua xác thực và phân quyền, được lưu trữ an toàn trong HTTP-only cookies.
 
 ## 📋 Yêu cầu hệ thống
 
 - Node.js phiên bản 18 trở lên
 - MongoDB 5.0 trở lên
-- Redis 6.0 trở lên (cho cache và quản lý phiên)
+- Apicache (cho memory cache API)
 - Tài khoản Google Cloud với các APIs được bật:
   - Container Registry
   - Kubernetes Engine
@@ -601,7 +600,7 @@ kubectl get deployments
 ## 🔒 Bảo mật
 
 Dự án áp dụng nhiều biện pháp bảo mật:
-- JWT cho xác thực người dùng
+- JWT cho xác thực người dùng (chỉ lưu trong HTTP-only cookies)
 - Bcrypt cho mã hóa mật khẩu
 - Sanitization cho dữ liệu đầu vào
 - Rate limiting để ngăn chặn tấn công brute force

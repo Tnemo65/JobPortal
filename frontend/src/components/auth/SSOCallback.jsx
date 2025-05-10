@@ -13,11 +13,10 @@ const SSOCallback = () => {
     const [searchParams] = useSearchParams();
     const success = searchParams.get('success');
     const error = searchParams.get('error');
-    const [status, setStatus] = useState('loading'); // loading, success, error
+    const [status, setStatus] = useState('loading');
     const requestTimeoutRef = useRef(null);
     
     useEffect(() => {
-        // Clean up loading state if component unmounts
         return () => {
             dispatch(setLoading(false));
             if (requestTimeoutRef.current) {
@@ -29,23 +28,29 @@ const SSOCallback = () => {
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                // Set loading state
                 dispatch(setLoading(true));
                 
-                // Set up timeout for the request
                 const controller = new AbortController();
                 requestTimeoutRef.current = setTimeout(() => controller.abort(), 15000);
                 
                 if (success === 'true') {
-                    // Get user profile using the cookies that were set by the backend
+                    // Small delay to ensure cookies are properly set
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Get user profile using the cookies that were set
                     const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
-                        withCredentials: true,
-                        signal: controller.signal
+                        withCredentials: true, // Important for cookies
+                        signal: controller.signal,
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
                     });
                     
                     clearTimeout(requestTimeoutRef.current);
                     
                     if (res.data.success) {
+                        // Store only user data in Redux, not tokens
                         dispatch(setUser(res.data.user));
                         toast.success(`Xin chào ${res.data.user.fullname}`);
                         setStatus('success');
@@ -57,12 +62,11 @@ const SSOCallback = () => {
                             } else {
                                 navigate('/');
                             }
-                        }, 1500); // Short delay to show success state
+                        }, 1500);
                     } else {
                         throw new Error('Không thể lấy thông tin người dùng');
                     }
                 } else {
-                    // Handle authentication error
                     console.error('SSO authentication error:', error);
                     toast.error(decodeURIComponent(error || 'Đăng nhập thất bại'));
                     setStatus('error');
@@ -80,7 +84,6 @@ const SSOCallback = () => {
                 setStatus('error');
                 setTimeout(() => navigate('/login'), 3000);
             } finally {
-                // Make sure loading state is reset
                 dispatch(setLoading(false));
             }
         };

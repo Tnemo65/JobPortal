@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     loading: false,
     user: null,
-    savedJobs: [], // Add a separate array for saved jobs
+    savedJobs: [], // We'll keep saved jobs in Redux for UI purposes
     error: null
 };
 
@@ -16,6 +16,7 @@ const authSlice = createSlice({
         },
         setUser: (state, action) => {
             state.user = action.payload;
+            // No token stored in state - only user data
         },
         setSavedJobs: (state, action) => {
             state.savedJobs = action.payload;

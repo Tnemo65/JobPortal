@@ -4,24 +4,18 @@ const isAuthenticated = async (req, res, next) => {
     try {
         let token;
         
-        // Priority 1: Check for access_token in cookies (preferred secure method)
-        if (req.cookies.access_token) {
+        // Log for debugging cookie issues (simplified)
+        console.log(`Auth - Request path: ${req.originalUrl || req.url}`);
+        
+        // Get token from HTTP-only cookies 
+        if (req.cookies && req.cookies.access_token) {
             token = req.cookies.access_token;
-        }
-        // Priority 2: Check legacy token in cookies (backward compatibility)
-        else if (req.cookies.token) {
-            token = req.cookies.token;
-        }
-        // Priority 3: Check Authorization header (least preferred, for backward compatibility)
-        else {
-            const authHeader = req.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                token = authHeader.split(' ')[1];
-            }
+            console.log('Auth - Using HTTP-only cookie token');
         }
         
-        // Kiểm tra token có tồn tại không
+        // Check if token exists
         if (!token) {
+            console.log('Auth - No token found in HTTP-only cookies');
             return res.status(401).json({
                 message: "Vui lòng đăng nhập để tiếp tục",
                 success: false,
@@ -30,10 +24,9 @@ const isAuthenticated = async (req, res, next) => {
         }
         
         try {
-            // Xác thực token
+            // Verify token
             const decoded = await jwt.verify(token, process.env.SECRET_KEY);
             
-            // Kiểm tra token có userId không
             if (!decoded || !decoded.userId) {
                 return res.status(401).json({
                     message: "Token không hợp lệ",
@@ -42,11 +35,11 @@ const isAuthenticated = async (req, res, next) => {
                 });
             }
             
-            // Gán userId vào request để các middleware và controller tiếp theo có thể truy cập
+            // Add userId to request for next middlewares/controllers
             req.id = decoded.userId;
             next();
         } catch (jwtError) {
-            // Xử lý các loại lỗi JWT cụ thể
+            // Handle specific JWT errors
             if (jwtError.name === 'TokenExpiredError') {
                 return res.status(401).json({
                     message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại",
@@ -68,7 +61,6 @@ const isAuthenticated = async (req, res, next) => {
             }
         }
     } catch (error) {
-        // Xử lý các lỗi không xác định
         console.error("Authentication error:", error);
         return res.status(500).json({
             message: "Lỗi xác thực. Vui lòng thử lại sau",

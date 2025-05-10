@@ -6,7 +6,7 @@ import { Notification } from '../models/notification.model.js';
 import passport from '../utils/passport.js';
 import { authLimiter, apiLimiter } from "../middlewares/rate-limiter.js";
 import strongPasswordCheck from "../middlewares/strong-password.js";
-import { apiCache, redisClient } from "../utils/redis-cache.js";
+import { apiCache } from "../utils/api-cache.js";
 import he from 'he'; // Import thư viện he để decode HTML entities
 import jwt from "jsonwebtoken";
 
@@ -125,14 +125,18 @@ router.route("/profile/resume").delete(isAuthenticated, deleteResume);
 // Add refreshToken endpoint to handle token refreshing
 router.route("/refresh-token").post(async (req, res) => {
     try {
-        // Get refresh token from cookie
+        console.log("Refresh token request received");
+        
+        // Get refresh token from cookie only
         const refreshToken = req.cookies.refresh_token;
         
         if (!refreshToken) {
+            console.log("No refresh token in cookies");
             return res.status(401).json({
                 message: "Refresh token not provided",
                 success: false,
-                code: "NO_REFRESH_TOKEN"
+                code: "NO_REFRESH_TOKEN", 
+                forceLogin: false
             });
         }
         
@@ -148,20 +152,6 @@ router.route("/refresh-token").post(async (req, res) => {
             });
         }
         
-        // Check if token exists in Redis
-        if (redisClient && redisClient.isReady) {
-            const storedToken = await redisClient.get(`refresh_token:${decoded.userId}`);
-            
-            // Token doesn't exist in Redis or doesn't match
-            if (!storedToken || storedToken !== refreshToken) {
-                return res.status(401).json({
-                    message: "Refresh token expired or revoked",
-                    success: false,
-                    code: "INVALID_REFRESH_TOKEN"
-                });
-            }
-        }
-        
         // Generate new access token
         const accessToken = jwt.sign(
             { userId: decoded.userId },
@@ -169,15 +159,20 @@ router.route("/refresh-token").post(async (req, res) => {
             { expiresIn: '1h' }
         );
         
-        // Set the new access token in a cookie with same settings as auth cookies
+        console.log("Generated new access token for user:", decoded.userId);
+        
+        console.log("Setting new HTTP-only cookie for access token");
+        
+        // Set the new access token in a cookie - simplified for HTTP
         res.cookie("access_token", accessToken, {
             maxAge: 60 * 60 * 1000, // 1 hour
             httpOnly: true,
-            secure: false, // Set to false for HTTP
-            sameSite: 'lax',
+            secure: false, // Must be false for HTTP
+            sameSite: 'lax', // Best setting for HTTP
             path: '/'
         });
         
+        // No token in response body - only cookies
         return res.status(200).json({
             message: "Token refreshed successfully",
             success: true

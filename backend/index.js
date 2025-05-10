@@ -15,9 +15,6 @@ import passport from './utils/passport.js';
 import session from 'express-session';
 import { basicLimiter } from "./middlewares/rate-limiter.js";
 import sanitizeMiddleware from "./utils/sanitizer.js";
-import { redisClient, isRedisReady } from "./utils/redis-cache.js";
-import { createClient } from "redis";
-import { RedisStore } from "connect-redis";
 import testRoutes from "./routes/test-routes.js";
 dotenv.config({});
 
@@ -41,54 +38,20 @@ const initApp = async () => {
     // Configure CORS first - before ANY other middleware
     const corsOptions = {
         origin: function(origin, callback) {
-            // Create a list of allowed origins
-            const allowedOrigins = [
-                'http://localhost:5173',
-                'http://localhost:3000',
-                'http://35.234.9.125',  // Frontend URL without port
-                'http://34.81.121.101', // Backend URL
-                'http://jobmarket.fun',
-                process.env.FRONTEND_URL,
-                process.env.BASE_URL
-            ].filter(Boolean);
+            console.log('CORS Request from origin:', origin || 'no origin');
             
-            console.log('CORS Request from origin:', origin);
-            
-            // Allow all origins in production for better compatibility
-            if (process.env.NODE_ENV === 'production' || process.env.KUBERNETES_SERVICE_HOST) {
-                console.log('Running in production/GKE - allowing all origins for HTTP compatibility');
-                callback(null, true);
-                return;
-            }
-            
-            // Allow requests with no origin (like same-origin requests, mobile apps or curl)
-            if (!origin) {
-                console.log('Request with no origin - allowing (same-domain request)');
-                callback(null, true);
-                return;
-            }
-            
-            if (allowedOrigins.includes(origin)) {
-                console.log('Origin in allowed list - allowing:', origin);
-                callback(null, true);
-            } else {
-                if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-                    console.log('Localhost origin - allowing:', origin);
-                    callback(null, true);
-                    return;
-                }
-                
-                console.log('CORS would normally block origin:', origin);
-                // Allow all origins temporarily for debugging
-                callback(null, true); 
-            }
+            // Luôn cho phép tất cả các origins khi sử dụng HTTP
+            // Điều này giúp cookie hoạt động đúng cách trong môi trường không có HTTPS
+            console.log('Cho phép tất cả các origins để HTTP-only cookies hoạt động');
+            callback(null, true);
         },
-        credentials: true, // This is critical for cookies to be sent with requests
+        credentials: true, // Quan trọng: Bắt buộc cho việc gửi/nhận cookies
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With'],
-        exposedHeaders: ['Set-Cookie'], // Expose Set-Cookie header to allow cookies to be set
-        maxAge: 86400 // 24 hours in seconds
+        exposedHeaders: ['Set-Cookie'], // Expose Set-Cookie header để cho phép cookies được thiết lập
+        maxAge: 86400, // 24 hours in seconds
+        preflightContinue: false // Ngăn chặn OPTIONS request tiếp tục đến route handler
     };
     
     // Apply CORS to all routes BEFORE any other middleware
@@ -174,78 +137,23 @@ const initApp = async () => {
         });
     };
 
-    // Cấu hình session với fallback khi không có Redis
+    // Cấu hình session với memory store
     const sessionConfig = {
         secret: process.env.SECRET_KEY || 'jobportal_default_secret_key_change_in_production',
         resave: false,
         saveUninitialized: false,
         cookie: { 
-            secure: false, // Sử dụng false cho HTTP
+            secure: false, // Luôn sử dụng false cho HTTP
             httpOnly: true, // Prevent client-side JS from reading the cookie
             sameSite: 'lax', // Sử dụng lax để hoạt động tốt với HTTP
             maxAge: 24 * 60 * 60 * 1000 // 1 day
-        }
+        },
+        // Giúp tránh lỗi session khi có nhiều request cùng lúc
+        rolling: true,
+        name: 'jobportal.sid' // Tên cookie session rõ ràng
     };
-
-    // Wait for Redis to be ready if it's enabled
-    if (redisClient && process.env.USE_REDIS_SESSIONS === 'true') {
-        try {
-            console.log('Checking Redis status for session storage...');
-            
-            // If Redis client exists but isn't ready, wait for it to connect
-            if (!redisClient.isReady) {
-                console.log('Redis client not ready, waiting for connection...');
-                
-                // Wait for Redis to be ready with a timeout
-                await new Promise((resolve, reject) => {
-                    // Set a timeout to prevent waiting indefinitely
-                    const timeout = setTimeout(() => {
-                        console.warn('Redis connection timeout - falling back to memory store');
-                        resolve(false);
-                    }, 5000); // 5 seconds timeout
-                    
-                    // Listen for ready event
-                    redisClient.on('ready', () => {
-                        clearTimeout(timeout);
-                        console.log('Redis client is now ready');
-                        resolve(true);
-                    });
-                    
-                    // If already ready, resolve immediately
-                    if (redisClient.isReady) {
-                        clearTimeout(timeout);
-                        resolve(true);
-                    }
-                });
-            }
-            
-            const useMemoryStore = false; // Set giá trị này thành false khi Redis đã sẵn sàng
-
-            // Check again if Redis is ready after waiting
-            // Check again if Redis is ready after waiting
-            if (useMemoryStore || !redisClient || redisClient.readOnly || !redisClient.isReady) {
-                console.warn('Using memory store for sessions');
-                // Không cần thiết lập sessionConfig.store, Express sẽ dùng memory store mặc định
-                if (isProduction) {
-                    console.error('CRITICAL: Redis not ready in production environment!');
-                    // In production, this might be a serious enough issue to exit
-                    if (process.env.EXIT_ON_REDIS_FAILURE === 'true') {
-                        process.exit(1);
-                    } else {
-                        console.warn('Continuing with memory store despite Redis failure - NOT RECOMMENDED FOR PRODUCTION');
-                    }
-                }
-            } else {
-                sessionConfig.store = new RedisStore({ client: redisClient });
-                console.log('Using Redis session store');
-            }
-        } catch (error) {
-            console.error('Error initializing Redis store:', error);
-            console.warn('Using memory store as fallback');
-        }
-    } else {
-        console.log('Redis not configured or disabled, using memory store');
-    }
+    
+    console.log('Sử dụng memory store cho sessions');
 
     // Configure session
     app.use(session(sessionConfig));
@@ -254,23 +162,7 @@ const initApp = async () => {
     app.use(passport.initialize());
     app.use(passport.session());
 
-    // Clear all active tokens at server start
-    if (redisClient && redisClient.isReady) {
-        console.log('Clearing all tokens from previous sessions...');
-        redisClient.keys('refresh_token:*').then(keys => {
-            if (keys.length > 0) {
-                console.log(`Found ${keys.length} active tokens to clear`);
-                return redisClient.del(keys);
-            } else {
-                console.log('No existing tokens found');
-            }
-        }).catch(err => {
-            console.error('Error clearing existing tokens:', err);
-        });
-    } else {
-        console.warn('Redis not available, cannot clear existing tokens');
-    }
-
+    
     // Health check endpoint cho Kubernetes readiness/liveness probe
     app.get('/health', (req, res) => {
       res.status(200).json({
@@ -323,7 +215,7 @@ const initApp = async () => {
     app.listen( process.env.PORT, '0.0.0.0', () => {
         console.log(`Server is running on PORT ${process.env.PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV}`);
-        console.log(`Session store: ${sessionConfig.store ? 'Redis' : 'Memory'}`);
+        console.log('Using memory store for session and cache');
     });
 
     // connect db

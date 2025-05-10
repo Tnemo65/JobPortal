@@ -20,5 +20,5 @@ export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL ||
 export const GOOGLE_AUTH_URL = `${USER_API_END_POINT}/auth/google`;
 export const GOOGLE_AUTH_CALLBACK_URL = `${USER_API_END_POINT}/auth/google/callback`;
 
-// Redis status endpoint (for health checking)
-export const REDIS_STATUS_URL = `${API_BASE}/health`;
+// Health check endpoint
+export const HEALTH_STATUS_URL = `${API_BASE}/health`;

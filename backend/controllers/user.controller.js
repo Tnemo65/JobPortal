@@ -3,26 +3,23 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
-import { apiCache } from "../utils/redis-cache.js";
+import { apiCache, clearUserCache } from "../utils/api-cache.js";
 import { Notification } from "../models/notification.model.js"; // Import Notification model
-import { redisClient } from "../utils/redis-cache.js"; // Import Redis client for refresh tokens
 
 // Helper function to set auth cookies
 const setAuthCookies = (res, accessToken, refreshToken = null) => {
-    // Determine if we're in production
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieDomain = isProduction ? 
-        (new URL(process.env.FRONTEND_URL || 'http://jobmarket.fun').hostname) : 
-        undefined;
+    // Simple cookie configuration for HTTP (non-HTTPS) use
+    // No domain needed for basic HTTP operation
+    
+    console.log('Setting HTTP-only cookies for authentication tokens');
     
     // Set access token cookie - short lived (1 hour)
     res.cookie("access_token", accessToken, { 
         maxAge: 60 * 60 * 1000, // 1 hour
         httpOnly: true, 
-        secure: false, // Set to false for HTTP
-        sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
-        path: '/',
-        domain: cookieDomain
+        secure: false, // Must be false for HTTP
+        sameSite: 'lax', // Best setting for HTTP
+        path: '/'
     });
     
     // Set refresh token cookie if provided - longer lived (7 days)
@@ -30,34 +27,25 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         res.cookie("refresh_token", refreshToken, { 
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             httpOnly: true, 
-            secure: false, // Set to false for HTTP
-            sameSite: 'lax', // Use 'lax' for better compatibility with HTTP
-            path: '/',
-            domain: cookieDomain
+            secure: false, // Must be false for HTTP
+            sameSite: 'lax', // Best setting for HTTP
+            path: '/'
         });
     }
 };
 
-const storeRefreshToken = async (userId, refreshToken) => {
-    if (redisClient && redisClient.isReady) {
-        // Store in Redis with TTL (7 days)
-        await redisClient.set(
-            `refresh_token:${userId}`, 
-            refreshToken,
-            { EX: 7 * 24 * 60 * 60 } // 7 days in seconds
-        );
-        console.log(`Stored refresh token in Redis for user: ${userId}`);
-    } else {
-        console.warn('Redis client not available for refresh token storage');
-    }
+// Helper function for authentication - simplified to only log activity
+const storeRefreshToken = async (userId) => {
+    // Just log - no storage outside of cookies
+    console.log(`User authenticated: ${userId}`);
+    await clearUserCache(userId);
 };
 
-// Helper function to clear refresh token from Redis
+// Helper function to handle logout - just clear cache
 const clearRefreshToken = async (userId) => {
-    if (redisClient && redisClient.isReady) {
-        await redisClient.del(`refresh_token:${userId}`);
-        console.log(`Cleared refresh token from Redis for user: ${userId}`);
-    }
+    // Just clear cache - no storage to remove
+    await clearUserCache(userId);
+    console.log(`User logged out: ${userId}`);
 };
 
 // Helper function to generate tokens
@@ -256,9 +244,12 @@ export const login = async (req, res) => {
         // Generate both access and refresh tokens
         const { accessToken, refreshToken } = await generateTokens(user._id);
 
-        // Store refresh token in Redis
-        await storeRefreshToken(user._id, refreshToken);
-
+        // Set cookies only - no token in response body
+        setAuthCookies(res, accessToken, refreshToken);
+        
+        // Log activity
+        await storeRefreshToken(user._id);
+        
         // Chuẩn bị thông tin người dùng để trả về client (bỏ mật khẩu)
         const userData = {
             _id: user._id,
@@ -269,9 +260,6 @@ export const login = async (req, res) => {
             profile: user.profile
         };
 
-        // Set auth cookies and return login success response
-        setAuthCookies(res, accessToken, refreshToken);
-        
         // Ghi log đăng nhập thành công
         console.log(`User login successful: ${userData.email} (${userData._id}), role: ${userData.role}`);
         
@@ -290,17 +278,16 @@ export const login = async (req, res) => {
 }
 export const logout = async (req, res) => {
     try {
-        // Get user ID from access token to clear refresh token from Redis
+        // Get user ID from access token
         const userId = req.id;
         if (userId) {
-            // Clear refresh token from Redis
+            // Clear cache only - no token storage to clear
             await clearRefreshToken(userId);
         }
 
-        // Clear all auth cookies
+        // Clear all cookies
         res.clearCookie("access_token");
         res.clearCookie("refresh_token");
-        res.clearCookie("token"); // Also clear legacy token for backward compatibility
         
         return res.status(200).json({
             message: "Logged out successfully.",
@@ -332,8 +319,11 @@ export const ssoAuthSuccess = async (req, res) => {
         // Generate both access and refresh tokens
         const { accessToken, refreshToken } = await generateTokens(user._id);
         
-        // Store refresh token in Redis
-        await storeRefreshToken(user._id, refreshToken);
+        // Set cookies only
+        setAuthCookies(res, accessToken, refreshToken);
+        
+        // Track login
+        await storeRefreshToken(user._id);
 
         // Format user data for response
         const userData = {
@@ -345,13 +335,10 @@ export const ssoAuthSuccess = async (req, res) => {
             profile: user.profile
         };
 
-        // Set the tokens in secure cookies
-        setAuthCookies(res, accessToken, refreshToken);
-        
         // Log successful SSO login
         console.log(`SSO login successful: ${userData.email} (${userData._id}), role: ${userData.role}`);
         
-        // Redirect to frontend WITHOUT token in URL params - we're using cookies now
+        // Redirect to frontend WITHOUT token in URL params - we're using cookies only
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
         return res.redirect(`${frontendURL}/sso-callback?success=true`);
     } catch (error) {

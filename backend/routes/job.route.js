@@ -4,7 +4,7 @@ import checkRole from "../middlewares/checkRole.js";
 import checkOwnership from "../middlewares/checkOwnership.js";
 import { getAdminJobs, getAllJobs, getJobById, postJob } from "../controllers/job.controller.js";
 import { apiLimiter } from "../middlewares/rate-limiter.js";
-import { apiCache } from "../utils/redis-cache.js";
+import { apiCache } from "../utils/api-cache.js";
 
 const router = express.Router();
 

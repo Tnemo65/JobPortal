@@ -3,7 +3,7 @@ import isAuthenticated from "../middlewares/isAuthenticated.js";
 import checkRole from "../middlewares/checkRole.js";
 import { applyJob, getApplicants, getAppliedJobs, updateStatus } from "../controllers/application.controller.js";
 import { apiLimiter } from "../middlewares/rate-limiter.js";
-import { apiCache } from "../utils/redis-cache.js";
+import { apiCache } from "../utils/api-cache.js";
  
 const router = express.Router();
 

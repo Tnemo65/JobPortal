@@ -12,11 +12,18 @@ const Home = () => {
   useGetAllJobs();
   const { user } = useSelector(store => store.auth);
   const navigate = useNavigate();
+  
+  // Kiểm tra nếu user là admin và redirect chỉ lần đầu tiên khi component được mount
+  // Sử dụng useRef để theo dõi xem đã thực hiện redirect chưa
+  const hasRedirected = React.useRef(false);
+  
   useEffect(() => {
-    if (user?.role === 'admin') {
-      navigate("/admin/companies");
+    // Chỉ redirect nếu user là admin và chưa redirect trước đó
+    if (user?.role === 'admin' && !hasRedirected.current) {
+      hasRedirected.current = true;
+      navigate("/admin/companies", { replace: true });
     }
-  }, []);
+  }, [user, navigate]);
   return (
     <div>
       <Navbar />

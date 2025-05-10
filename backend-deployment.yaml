@@ -86,23 +86,11 @@ spec:
               value: "http://jobmarket.fun"
             - name: FRONTEND_URL
               value: "http://jobmarket.fun"
-            - name: REDIS_URL
-              value: "redis://10.174.181.3:6379"
             - name: USE_SHARDING
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: USE_SHARDING
-            - name: USE_REDIS_CACHE
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: USE_REDIS_CACHE
-            - name: USE_REDIS_SESSIONS
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: USE_REDIS_SESSIONS
           readinessProbe:
             httpGet:
               path: /health
@@ -115,4 +103,3 @@ spec:
               port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
-            
