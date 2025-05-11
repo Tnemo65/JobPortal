@@ -28,6 +28,7 @@ import { Avatar, AvatarImage } from './ui/avatar';
 import Navbar from './shared/Navbar';
 import { addSavedJob, removeSavedJob } from '@/redux/authSlice';
 import useGetAppliedJobs from '@/hooks/useGetAppliedJobs';
+import JobSummary from './JobSummary'; 
 
 const JobDescription = () => {
     const {singleJob} = useSelector(store => store.job);
@@ -375,10 +376,22 @@ const JobDescription = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Main Job Info */}
                         <div className="lg:col-span-2">
+
+                            {/* Job Summary - THÊM PHẦN NÀY */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white p-6 rounded-xl shadow-md mb-8"
+                            >
+                                <JobSummary jobId={jobId} />
+                            </motion.div>
+            
+
                             {/* Description */}
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
                                 className="bg-white p-6 rounded-xl shadow-md mb-8"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -394,7 +407,7 @@ const JobDescription = () => {
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
+                                transition={{ delay: 0.2 }}
                                 className="bg-white p-6 rounded-xl shadow-md mb-8"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -429,7 +442,7 @@ const JobDescription = () => {
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
+                                transition={{ delay: 0.3 }}
                                 className="bg-white p-6 rounded-xl shadow-md"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">

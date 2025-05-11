@@ -16,6 +16,8 @@ import session from 'express-session';
 import { basicLimiter } from "./middlewares/rate-limiter.js";
 import sanitizeMiddleware from "./utils/sanitizer.js";
 import testRoutes from "./routes/test-routes.js";
+import aiRoutes from "./routes/ai.route.js";
+
 dotenv.config({});
 
 const app = express();
@@ -213,6 +215,7 @@ const corsOptions = {
     app.use("/api/v1/job", jobRoute);
     app.use("/api/v1/application", applicationRoute);
     app.use("/api/v1/test", testRoutes);
+    app.use("/api/v1/ai", aiRoutes);
 
     // Add a catch-all route for debugging
 app.get("/api/v1/*", (req, res) => {
