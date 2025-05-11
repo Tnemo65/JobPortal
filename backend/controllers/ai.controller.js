@@ -27,7 +27,9 @@ export const summarizeJob = async (req, res) => {
       path: "company",
       select: "name industry location"
     });
-    
+        // Thêm log chi tiết
+    console.log("Job ID:", id);
+    console.log("Found job:", job ? "Yes" : "No");
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -134,8 +136,10 @@ export const generateJobSummary = async (jobId) => {
     apiCache.set(`summary_${jobId}`, summary, 86400);
     
     return summary;
+
   } catch (error) {
     console.error("Auto generate job summary error:", error);
+    // Trả về null thay vì res.status(500)... vì đây không phải là hàm xử lý request
     return null;
   }
 };

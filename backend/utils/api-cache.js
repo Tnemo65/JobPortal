@@ -35,7 +35,7 @@ const cacheOptions = {
 
 // Khởi tạo apicache với memory cache
 const apiCache = apicache.options(cacheOptions);
-
+console.log("apiCache available:", !!apiCache);
 // Helper function to clear cache for a specific user
 const clearUserCache = async (userId) => {
     // Sử dụng apicache's built-in clear method
