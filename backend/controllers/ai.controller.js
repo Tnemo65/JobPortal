@@ -198,7 +198,8 @@ const prompt = `
 export const generateInterviewQuestions = async (req, res) => {
   try {
     const { jobId } = req.params;
-    
+        console.log("Generating interview questions for job:", jobId);
+
     if (!jobId) {
       return res.status(400).json({
         success: false,
@@ -206,11 +207,34 @@ export const generateInterviewQuestions = async (req, res) => {
       });
     }
     
-    // Lấy thông tin công việc từ database
-    const job = await Job.findById(jobId).populate({
-      path: "company",
-      select: "name industry"
-    });
+    // Kiểm tra cache trước
+    const cacheKey = `interview_questions_${jobId}`;
+    const cachedQuestions = apiCache.get(cacheKey);
+    if (cachedQuestions) {
+      console.log("Returning cached interview questions");
+      return res.status(200).json({
+        success: true,
+        jobTitle: "Cached Job", // Sẽ được ghi đè bởi frontend
+        questions: cachedQuestions
+      });
+    }
+    
+    // Lấy thông tin công việc từ database với error handling chi tiết
+    let job;
+    try {
+      job = await Job.findById(jobId).populate({
+        path: "company",
+        select: "name industry"
+      });
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi khi truy vấn cơ sở dữ liệu",
+        error: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+      });
+    }
+    
     
     if (!job) {
       return res.status(404).json({
@@ -220,28 +244,43 @@ export const generateInterviewQuestions = async (req, res) => {
     }
     
     // Tạo prompt cho OpenAI
-    const prompt = `
-      Tạo bộ câu hỏi phỏng vấn cho vị trí sau:
-      
-      Tiêu đề: ${job.title}
-      Công ty: ${job.company?.name || ""}
-      Ngành: ${job.company?.industry || ""}
-      Mô tả công việc: ${job.description}
-      Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
-      Mức kinh nghiệm: ${job.experienceLevel}
-      
-      Tạo 10 câu hỏi phỏng vấn được chia thành 3 loại:
-      
-      1. Câu hỏi kỹ thuật/kỹ năng chuyên môn (4 câu)
-      2. Câu hỏi về kinh nghiệm làm việc (3 câu)
-      3. Câu hỏi về tính cách và phù hợp văn hóa (3 câu)
-      
-      Mỗi câu hỏi nên đi kèm với:
-      - Mục đích: Giải thích ngắn gọn tại sao câu hỏi này quan trọng
-      - Gợi ý trả lời: Những điểm chính mà một ứng viên tốt nên đề cập
-      
-      Định dạng phản hồi phải rõ ràng với tiêu đề và phân loại rõ ràng.
-    `;
+const prompt = `
+  Tạo bộ câu hỏi phỏng vấn cho vị trí sau:
+  
+  Tiêu đề: ${job.title}
+  Công ty: ${job.company?.name || ""}
+  Ngành: ${job.company?.industry || ""}
+  Mô tả công việc: ${job.description}
+  Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
+  Mức kinh nghiệm: ${job.experienceLevel}
+  
+  Tạo 10 câu hỏi phỏng vấn được chia thành 3 loại:
+  
+  1. Câu hỏi kỹ thuật/kỹ năng chuyên môn (4 câu)
+  2. Câu hỏi về kinh nghiệm làm việc (3 câu)
+  3. Câu hỏi về tính cách và phù hợp văn hóa (3 câu)
+  
+  Mỗi câu hỏi phải theo cấu trúc chính xác sau:
+  
+  I. CÂU HỎI KỸ THUẬT/CHUYÊN MÔN:
+  Câu 1: [câu hỏi]
+  Mục đích: [mục đích của câu hỏi]
+  Gợi ý: [gợi ý trả lời]
+  
+  Câu 2: [câu hỏi]
+  Mục đích: [mục đích của câu hỏi]
+  Gợi ý: [gợi ý trả lời]
+  
+  (Tương tự cho các câu tiếp theo)
+  
+  II. CÂU HỎI VỀ KINH NGHIỆM:
+  (Tương tự như mẫu trên)
+  
+  III. CÂU HỎI VỀ TÍNH CÁCH VÀ PHÙ HỢP VĂN HÓA:
+  (Tương tự như mẫu trên)
+  
+  QUAN TRỌNG: KHÔNG sử dụng bất kỳ ký tự định dạng markdown nào như **, *, _, # trong phản hồi. Không sử dụng số thứ tự như 1., 2. cho các câu hỏi. Sử dụng chính xác từ "Câu 1:", "Câu 2:" để bắt đầu mỗi câu hỏi.
+`;
     
     // Gọi API OpenAI
     const response = await openai.chat.completions.create({
@@ -249,7 +288,7 @@ export const generateInterviewQuestions = async (req, res) => {
       messages: [
         { 
           role: "system", 
-          content: "Bạn là một chuyên gia tuyển dụng với nhiều năm kinh nghiệm phỏng vấn cho nhiều vị trí công việc khác nhau. Bạn biết cách đặt câu hỏi để đánh giá cả kỹ năng chuyên môn và sự phù hợp văn hóa." 
+          content: "Bạn là một chuyên gia tuyển dụng với nhiều năm kinh nghiệm phỏng vấn. Nhiệm vụ của bạn là tạo câu hỏi phỏng vấn theo định dạng chuẩn không sử dụng markdown hoặc các ký tự đặc biệt. Mỗi câu hỏi phải đi kèm với mục đích và gợi ý trả lời rõ ràng." 
         },
         { 
           role: "user", 
@@ -263,7 +302,6 @@ export const generateInterviewQuestions = async (req, res) => {
     const questions = response.choices[0].message.content;
     
     // Lưu cache để tái sử dụng (3 ngày)
-    const cacheKey = `interview_questions_${jobId}`;
     apiCache.set(cacheKey, questions, 259200);
     
     return res.status(200).json({

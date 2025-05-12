@@ -19,51 +19,134 @@ const InterviewQuestionButton = ({ jobId, jobTitle }) => {
     culture: []
   });
 
-  const fetchInterviewQuestions = async () => {
-    if (!jobId) return;
+const fetchInterviewQuestions = async () => {
+    const fallbackData = `
+I. CÂU HỎI KỸ THUẬT/CHUYÊN MÔN:
+Câu 1: Hãy mô tả kinh nghiệm của bạn với công nghệ/kỹ năng chính liên quan đến vị trí này?
+Mục đích: Đánh giá kiến thức và kinh nghiệm thực tế của ứng viên với các công nghệ/kỹ năng cốt lõi.
+Gợi ý: Nêu rõ các dự án đã làm, vai trò, thời gian sử dụng công nghệ, thách thức đã gặp và cách giải quyết.
 
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_BASE}/ai/interview-questions/${jobId}`, {
-        withCredentials: true
-      });
+II. CÂU HỎI VỀ KINH NGHIỆM:
+Câu 1: Hãy kể về một tình huống khó khăn trong công việc trước đây và cách bạn đã giải quyết nó?
+Mục đích: Đánh giá khả năng giải quyết vấn đề và đối mặt với thách thức.
+Gợi ý: Mô tả rõ vấn đề, cách tiếp cận, các bước giải quyết và kết quả đạt được. Nêu bài học rút ra từ tình huống đó.
 
-      if (response.data.success) {
-        setQuestions(response.data.questions);
+III. CÂU HỎI VỀ TÍNH CÁCH VÀ PHÙ HỢP VĂN HÓA:
+Câu 1: Bạn thích làm việc trong môi trường như thế nào và tại sao?
+Mục đích: Đánh giá sự phù hợp của ứng viên với văn hóa công ty.
+Gợi ý: Mô tả môi trường làm việc lý tưởng, cách giao tiếp ưa thích, và cách bạn đóng góp vào văn hóa tích cực tại nơi làm việc.
+`;
+
+    console.log("Interview Questions Button - JobID:", jobId);
+    
+      setLoading(true); // Đặt loading = true ngay từ đầu
+  if (!jobId) {
+    console.error("Missing jobId, cannot fetch interview questions");
+    toast.error("Thiếu thông tin công việc, không thể tải câu hỏi");
+    setLoading(false);
+    return;
+  }
+  try {
+        console.log(`Calling API: ${API_BASE}/ai/interview-questions/${jobId}`);
+
+    // Xóa withCredentials để không gửi cookie xác thực
+    const response = await axios.get(`${API_BASE}/ai/interview-questions/${jobId}`, {
+      timeout: 30000 // 30 giây
+    });
+        console.log("API response:", response.data);
+
+
+    if (response.data.success) {
+    const cleanedQuestions = response.data.questions
+    .replace(/\*\*/g, '')  // Loại bỏ dấu **
+    .replace(/\*/g, '')    // Loại bỏ dấu *
+    .replace(/\_/g, '')    // Loại bỏ dấu _
+    .replace(/\#/g, '');   // Loại bỏ dấu #
+
+      setQuestions(response.data.questions);
+      parseQuestions(response.data.questions);
+    } else {
+      toast.error(response.data.message || "Không thể tải câu hỏi phỏng vấn");
+    }
+} catch (error) {
+      console.log("Using fallback interview questions data");
+  setQuestions(fallbackData);
+  parseQuestions(fallbackData);
+    console.error('Error fetching interview questions:', error);
+    const errorMessage = error.response?.data?.message || 
+                        "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+    toast.error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const parseQuestions = (questionsText) => {
+  try {
+    // Định nghĩa các pattern để tìm các phần
+    const patternTechnical = /I\.\s*CÂU HỎI KỸ THUẬT\/CHUYÊN MÔN:([\s\S]*?)(?=II\.|$)/i;
+    const patternExperience = /II\.\s*CÂU HỎI VỀ KINH NGHIỆM:([\s\S]*?)(?=III\.|$)/i;
+    const patternCulture = /III\.\s*CÂU HỎI VỀ TÍNH CÁCH VÀ PHÙ HỢP VĂN HÓA:([\s\S]*?)(?=$)/i;
+    
+    // Trích xuất nội dung của từng phần
+    const technicalContent = questionsText.match(patternTechnical)?.[1] || '';
+    const experienceContent = questionsText.match(patternExperience)?.[1] || '';
+    const cultureContent = questionsText.match(patternCulture)?.[1] || '';
+    
+    // Hàm xử lý và trích xuất câu hỏi từ nội dung
+    const extractQuestions = (content) => {
+      const questions = [];
+      
+      // Tìm tất cả các câu hỏi trong nội dung
+      const questionPattern = /Câu\s*\d+\s*:\s*(.*?)(?=Mục đích:|$)/gi;
+      const purposePattern = /Mục đích\s*:\s*(.*?)(?=Gợi ý:|$)/gi;
+      const suggestionPattern = /Gợi ý\s*:\s*([\s\S]*?)(?=Câu\s*\d+\s*:|$)/gi;
+      
+      // Tách thành các block câu hỏi (mỗi câu hỏi là một block)
+      const questionBlocks = content.split(/Câu\s*\d+\s*:/i).filter(block => block.trim());
+      
+      // Xử lý từng block
+      questionBlocks.forEach(block => {
+        if (!block.trim()) return;
         
-        // Parse questions into categories
-        parseQuestions(response.data.questions);
-      } else {
-        toast.error("Không thể tải câu hỏi phỏng vấn");
-      }
-    } catch (error) {
-      console.error('Error fetching interview questions:', error);
-      toast.error("Đã xảy ra lỗi khi tải câu hỏi phỏng vấn");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const parseQuestions = (questionsText) => {
-    try {
-      // Extract technical questions
-      const technicalQuestions = extractQuestionsByCategory(questionsText, 'kỹ thuật', 'chuyên môn');
-      
-      // Extract experience questions
-      const experienceQuestions = extractQuestionsByCategory(questionsText, 'kinh nghiệm');
-      
-      // Extract culture fit questions
-      const cultureQuestions = extractQuestionsByCategory(questionsText, 'tính cách', 'văn hóa', 'phù hợp');
-      
-      setCategories({
-        technical: technicalQuestions,
-        experience: experienceQuestions,
-        culture: cultureQuestions
+        // Loại bỏ các ký tự markdown
+        block = block.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '');
+        
+        // Tách các phần từ block
+        const parts = block.split(/Mục đích:|Gợi ý:/i);
+        
+        const question = parts[0]?.trim();
+        const purpose = parts[1]?.trim();
+        const suggestions = parts[2]?.trim();
+        
+        if (question) {
+          questions.push({
+            question,
+            purpose,
+            suggestions 
+          });
+        }
       });
-    } catch (error) {
-      console.error('Error parsing questions:', error);
-    }
-  };
+      
+      return questions;
+    };
+    
+    // Xử lý và set state cho từng loại
+    setCategories({
+      technical: extractQuestions(technicalContent),
+      experience: extractQuestions(experienceContent),
+      culture: extractQuestions(cultureContent)
+    });
+  } catch (error) {
+    console.error('Error parsing questions:', error);
+    // Đảm bảo có dữ liệu mặc định để hiển thị khi parse lỗi
+    setCategories({
+      technical: [],
+      experience: [],
+      culture: []
+    });
+  }
+};
 
   const extractQuestionsByCategory = (content, ...keywords) => {
     const questions = [];
@@ -183,11 +266,15 @@ const InterviewQuestionButton = ({ jobId, jobTitle }) => {
 
   return (
     <>
-      <Button
+        <Button
         variant="outline"
         className="rounded-md border-accent text-accent hover:bg-accent/10"
-        onClick={() => setOpen(true)}
-      >
+        onClick={() => {
+            setOpen(true);
+            // Thêm trực tiếp việc gọi API khi click button
+            fetchInterviewQuestions();
+        }}
+        >
         <HelpCircle className="h-4 w-4 mr-2" />
         Câu hỏi phỏng vấn
       </Button>
@@ -247,6 +334,13 @@ const InterviewQuestionButton = ({ jobId, jobTitle }) => {
               <p className="text-muted-foreground">
                 Không thể tải câu hỏi phỏng vấn. Vui lòng thử lại.
               </p>
+                <Button 
+    onClick={fetchInterviewQuestions} 
+    variant="outline"
+    className="mx-auto"
+  >
+    Thử lại
+  </Button>
             </div>
           )}
 
