@@ -79,6 +79,7 @@ Gợi ý: Mô tả môi trường làm việc lý tưởng, cách giao tiếp ư
   } finally {
     setLoading(false);
   }
+  
 };
 
 const parseQuestions = (questionsText) => {
