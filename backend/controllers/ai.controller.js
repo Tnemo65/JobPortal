@@ -38,19 +38,42 @@ export const summarizeJob = async (req, res) => {
     }
     
     // Tạo prompt cho AI
-    const prompt = `
-      Tóm tắt ngắn gọn thông tin công việc sau đây trong khoảng 100-150 từ.
-      Tập trung vào các kỹ năng quan trọng, trách nhiệm chính và yêu cầu kinh nghiệm.
-      Format tóm tắt dưới dạng điểm đạn (bullet points).
-      
-      Tiêu đề: ${job.title}
-      Công ty: ${job.company.name}
-      Địa điểm: ${job.location}
-      Loại công việc: ${job.jobType}
-      Mức kinh nghiệm: ${job.experienceLevel}
-      Mô tả: ${job.description}
-      Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
-    `;
+const prompt = `
+  Tóm tắt ngắn gọn thông tin công việc sau đây trong khoảng 100-150 từ.
+  Tập trung vào các kỹ năng quan trọng, trách nhiệm chính và yêu cầu kinh nghiệm.
+  
+  Tiêu đề: ${job.title}
+  Công ty: ${job.company.name}
+  Địa điểm: ${job.location}
+  Loại công việc: ${job.jobType}
+  Mức kinh nghiệm: ${job.experienceLevel}
+  Mô tả: ${job.description}
+  Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
+  
+  Định dạng tóm tắt phải đúng như sau (không sử dụng markdown với dấu **):
+
+  Tóm tắt công việc
+
+  [Tên công việc]
+
+  - Công ty: [Tên công ty]
+  - Địa điểm: [Địa điểm]
+  - Loại công việc: [Loại công việc]
+  - Mức kinh nghiệm: [Mức kinh nghiệm]
+
+  Kỹ năng quan trọng:
+  1. [Kỹ năng 1]
+  2. [Kỹ năng 2]
+
+  Trách nhiệm chính:
+  1. [Trách nhiệm 1]
+  2. [Trách nhiệm 2]
+  3. [Trách nhiệm 3]
+
+  Yêu cầu kinh nghiệm:
+  1. [Yêu cầu 1]
+  2. [Yêu cầu 2]
+`;
     
     // Gọi API OpenAI
     const response = await openai.chat.completions.create({
@@ -98,19 +121,42 @@ export const generateJobSummary = async (jobId) => {
     
     if (!job) return null;
     
-    const prompt = `
-      Tóm tắt ngắn gọn thông tin công việc sau đây trong khoảng 100 từ.
-      Tập trung vào các kỹ năng quan trọng, trách nhiệm chính và yêu cầu kinh nghiệm.
-      
-      Tiêu đề: ${job.title}
-      Công ty: ${job.company.name}
-      Địa điểm: ${job.location}
-      Loại công việc: ${job.jobType}
-      Mức kinh nghiệm: ${job.experienceLevel}
-      Mô tả: ${job.description}
-      Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
-    `;
-    
+const prompt = `
+  Tóm tắt ngắn gọn thông tin công việc sau đây trong khoảng 100 từ.
+  Tập trung vào các kỹ năng quan trọng, trách nhiệm chính và yêu cầu kinh nghiệm.
+  
+  Tiêu đề: ${job.title}
+  Công ty: ${job.company.name}
+  Địa điểm: ${job.location}
+  Loại công việc: ${job.jobType}
+  Mức kinh nghiệm: ${job.experienceLevel}
+  Mô tả: ${job.description}
+  Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
+  
+  Định dạng tóm tắt phải đúng như sau (không sử dụng markdown với dấu **):
+
+  Tóm tắt công việc
+
+  [Tên công việc]
+
+  - Công ty: [Tên công ty]
+  - Địa điểm: [Địa điểm]
+  - Loại công việc: [Loại công việc]
+  - Mức kinh nghiệm: [Mức kinh nghiệm]
+
+  Kỹ năng quan trọng:
+  1. [Kỹ năng 1]
+  2. [Kỹ năng 2]
+
+  Trách nhiệm chính:
+  1. [Trách nhiệm 1]
+  2. [Trách nhiệm 2]
+  3. [Trách nhiệm 3]
+
+  Yêu cầu kinh nghiệm:
+  1. [Yêu cầu 1]
+  2. [Yêu cầu 2]
+`;
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -145,129 +191,261 @@ export const generateJobSummary = async (jobId) => {
 };
 
 
-export const testJobSummary = async (req, res) => {
+/**
+ * Tạo câu hỏi phỏng vấn tự động dựa trên thông tin công việc
+ * GET /api/v1/ai/interview-questions/:jobId
+ */
+export const generateInterviewQuestions = async (req, res) => {
   try {
-    // Lấy sample ID từ query param hoặc dùng mặc định
-    const sampleId = req.query.sample || "developer";
-
-    // Các mẫu công việc để test
-    const jobSamples = {
-      developer: {
-        title: "Lập trình viên Backend",
-        company: { name: "Tech Solution JSC" },
-        description: "Chúng tôi đang tìm kiếm một Lập trình viên Backend có kinh nghiệm để tham gia vào dự án phát triển hệ thống thanh toán trực tuyến. Bạn sẽ làm việc với các công nghệ hiện đại như Node.js, MongoDB, và AWS để xây dựng các API RESTful hiệu suất cao và an toàn.",
-        requirements: ["Có ít nhất 2 năm kinh nghiệm với Node.js và Express", "Thành thạo MongoDB và Redis", "Hiểu biết về bảo mật web và xác thực người dùng", "Kinh nghiệm làm việc với Docker và Kubernetes là một lợi thế"],
-        salary: 25000000,
-        experienceLevel: "Trung cấp",
-        location: "Hà Nội",
-        jobType: "Toàn thời gian"
-      },
-      marketing: {
-        title: "Chuyên viên Marketing",
-        company: { name: "Global Brand Vietnam" },
-        description: "Global Brand Vietnam cần tuyển Chuyên viên Marketing để lên kế hoạch và triển khai các chiến dịch quảng cáo trên các nền tảng số. Người ứng tuyển sẽ phân tích dữ liệu thị trường, quản lý nội dung truyền thông xã hội và làm việc với đội ngũ sáng tạo để phát triển tài liệu marketing.",
-        requirements: ["Bằng cử nhân Marketing, Truyền thông hoặc tương đương", "Kinh nghiệm 1-3 năm trong digital marketing", "Thành thạo Google Analytics và các công cụ quảng cáo trên Facebook, Google", "Kỹ năng phân tích và báo cáo dữ liệu tốt"],
-        salary: 18000000,
-        experienceLevel: "Sơ cấp",
-        location: "Hồ Chí Minh",
-        jobType: "Toàn thời gian"
-      },
-      designer: {
-        title: "UI/UX Designer",
-        company: { name: "Creative Studio" },
-        description: "Creative Studio đang tìm kiếm một UI/UX Designer tài năng để thiết kế giao diện người dùng cho các ứng dụng di động và web. Bạn sẽ làm việc trong môi trường năng động, sáng tạo và có cơ hội học hỏi từ các chuyên gia thiết kế hàng đầu.",
-        requirements: ["Tối thiểu 2 năm kinh nghiệm trong UI/UX Design", "Thành thạo Figma, Adobe XD và Photoshop", "Portfolio thể hiện các dự án thiết kế ấn tượng", "Kinh nghiệm với design system và responsive design"],
-        salary: 22000000,
-        experienceLevel: "Trung cấp",
-        location: "Đà Nẵng",
-        jobType: "Toàn thời gian"
-      },
-      remote: {
-        title: "Frontend Developer (Remote)",
-        company: { name: "International Tech" },
-        description: "International Tech đang tìm kiếm Frontend Developer làm việc từ xa. Bạn sẽ phát triển giao diện người dùng cho các ứng dụng web sử dụng React và TypeScript. Chúng tôi cung cấp lịch làm việc linh hoạt và môi trường quốc tế.",
-        requirements: ["Kinh nghiệm tối thiểu 3 năm với React", "Thành thạo TypeScript và JavaScript", "Hiểu biết về Redux, React Router và các thư viện React phổ biến", "Khả năng giao tiếp tiếng Anh tốt"],
-        salary: 35000000,
-        experienceLevel: "Cao cấp",
-        location: "Remote",
-        jobType: "Toàn thời gian"
-      },
-      intern: {
-        title: "Thực tập sinh Kế toán",
-        company: { name: "Finance Group" },
-        description: "Finance Group đang tìm kiếm Thực tập sinh Kế toán để hỗ trợ bộ phận kế toán trong các hoạt động hàng ngày. Đây là cơ hội tuyệt vời để học hỏi và phát triển kỹ năng kế toán trong môi trường chuyên nghiệp.",
-        requirements: ["Sinh viên năm cuối ngành Kế toán, Tài chính", "Có kiến thức cơ bản về kế toán và Excel", "Chăm chỉ, cẩn thận và có tinh thần học hỏi", "Có thể làm việc tối thiểu 3 tháng"],
-        salary: 5000000,
-        experienceLevel: "Thực tập",
-        location: "Hồ Chí Minh",
-        jobType: "Bán thời gian"
-      }
-    };
-
-    // Kiểm tra mẫu tồn tại
-    if (!jobSamples[sampleId]) {
+    const { jobId } = req.params;
+    
+    if (!jobId) {
       return res.status(400).json({
         success: false,
-        message: "Mẫu công việc không tồn tại",
-        availableSamples: Object.keys(jobSamples)
+        message: "ID công việc là bắt buộc"
       });
     }
-
-    // Lấy mẫu công việc từ danh sách
-    const jobSample = jobSamples[sampleId];
-
-    // Tạo prompt cho API OpenAI
-    const prompt = `
-      Tóm tắt ngắn gọn thông tin công việc sau đây trong khoảng 100-150 từ.
-      Tập trung vào các kỹ năng quan trọng, trách nhiệm chính và yêu cầu kinh nghiệm.
-      Format tóm tắt dưới dạng điểm đạn (bullet points).
-      
-      Tiêu đề: ${jobSample.title}
-      Công ty: ${jobSample.company.name}
-      Địa điểm: ${jobSample.location}
-      Loại công việc: ${jobSample.jobType}
-      Mức kinh nghiệm: ${jobSample.experienceLevel}
-      Mô tả: ${jobSample.description}
-      Yêu cầu: ${Array.isArray(jobSample.requirements) ? jobSample.requirements.join(". ") : jobSample.requirements}
-    `;
-
-    // Khởi tạo OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    
+    // Lấy thông tin công việc từ database
+    const job = await Job.findById(jobId).populate({
+      path: "company",
+      select: "name industry"
     });
-
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy công việc"
+      });
+    }
+    
+    // Tạo prompt cho OpenAI
+    const prompt = `
+      Tạo bộ câu hỏi phỏng vấn cho vị trí sau:
+      
+      Tiêu đề: ${job.title}
+      Công ty: ${job.company?.name || ""}
+      Ngành: ${job.company?.industry || ""}
+      Mô tả công việc: ${job.description}
+      Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements}
+      Mức kinh nghiệm: ${job.experienceLevel}
+      
+      Tạo 10 câu hỏi phỏng vấn được chia thành 3 loại:
+      
+      1. Câu hỏi kỹ thuật/kỹ năng chuyên môn (4 câu)
+      2. Câu hỏi về kinh nghiệm làm việc (3 câu)
+      3. Câu hỏi về tính cách và phù hợp văn hóa (3 câu)
+      
+      Mỗi câu hỏi nên đi kèm với:
+      - Mục đích: Giải thích ngắn gọn tại sao câu hỏi này quan trọng
+      - Gợi ý trả lời: Những điểm chính mà một ứng viên tốt nên đề cập
+      
+      Định dạng phản hồi phải rõ ràng với tiêu đề và phân loại rõ ràng.
+    `;
+    
     // Gọi API OpenAI
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         { 
           role: "system", 
-          content: "Bạn là trợ lý AI chuyên về tóm tắt thông tin tuyển dụng việc làm một cách ngắn gọn, chuyên nghiệp và đầy đủ thông tin quan trọng." 
+          content: "Bạn là một chuyên gia tuyển dụng với nhiều năm kinh nghiệm phỏng vấn cho nhiều vị trí công việc khác nhau. Bạn biết cách đặt câu hỏi để đánh giá cả kỹ năng chuyên môn và sự phù hợp văn hóa." 
         },
         { 
           role: "user", 
           content: prompt 
         }
       ],
-      temperature: 0.5,
-      max_tokens: 300
+      temperature: 0.7,
+      max_tokens: 1200
     });
     
-    const summary = response.choices[0].message.content;
+    const questions = response.choices[0].message.content;
     
-    // Trả về kết quả với thông tin mẫu đầy đủ
+    // Lưu cache để tái sử dụng (3 ngày)
+    const cacheKey = `interview_questions_${jobId}`;
+    apiCache.set(cacheKey, questions, 259200);
+    
     return res.status(200).json({
       success: true,
-      jobDetails: jobSample,
-      summary,
-      note: "Đây là API test dùng để demo chức năng tóm tắt công việc bằng AI"
+      jobTitle: job.title,
+      questions
     });
     
   } catch (error) {
-    console.error("AI test job summary error:", error);
+    console.error("AI generate interview questions error:", error);
     return res.status(500).json({
       success: false,
-      message: "Không thể tạo tóm tắt công việc. Vui lòng thử lại sau.",
+      message: "Không thể tạo câu hỏi phỏng vấn. Vui lòng thử lại sau.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Cải thiện mô tả công việc bằng AI
+ * POST /api/v1/ai/improve-description/:jobId
+ */
+export const improveJobDescription = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        message: "ID công việc là bắt buộc"
+      });
+    }
+    
+    // Kiểm tra cache trước
+    const cacheKey = `improved_description_${jobId}`;
+    const cachedDescription = apiCache.get(cacheKey);
+    if (cachedDescription) {
+      return res.status(200).json({
+        success: true,
+        improvedDescription: cachedDescription
+      });
+    }
+    
+    // Lấy thông tin công việc từ database
+    const job = await Job.findById(jobId).populate({
+      path: "company",
+      select: "name industry location"
+    });
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy công việc"
+      });
+    }
+    
+    // Kiểm tra quyền truy cập (người tạo job hoặc admin)
+    if (req.id && req.id.toString() !== job.created_by.toString() && req.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền cập nhật mô tả công việc này"
+      });
+    }
+    
+    // Tạo prompt cho AI
+    const prompt = `
+      Hãy viết lại mô tả công việc chuyên nghiệp, hấp dẫn và cấu trúc rõ ràng dựa trên các thông tin sau:
+      
+      Tiêu đề công việc: ${job.title}
+      Công ty: ${job.company?.name || "Không có thông tin"}
+      Ngành: ${job.company?.industry || "Không có thông tin"} 
+      Địa điểm: ${job.location || "Không có thông tin"}
+      Loại công việc: ${job.jobType || "Không có thông tin"}
+      Mức kinh nghiệm: ${job.experienceLevel || "Không có thông tin"}
+      Mức lương: ${job.salary ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(job.salary) : "Thỏa thuận"}
+      Yêu cầu: ${Array.isArray(job.requirements) ? job.requirements.join(". ") : job.requirements || "Không có thông tin"}
+      
+      Mô tả hiện tại: "${job.description}"
+      
+      Hãy tạo một mô tả công việc có cấu trúc rõ ràng với các phần:
+      - Giới thiệu về công ty và vị trí
+      - Mô tả trách nhiệm công việc chi tiết và hấp dẫn
+      - Yêu cầu và kỹ năng cần thiết (bổ sung từ thông tin yêu cầu đã cung cấp)
+      - Quyền lợi và cơ hội phát triển
+      - Lời kêu gọi ứng tuyển
+      
+      Hãy sử dụng từ ngữ chuyên nghiệp, cụ thể, tạo sự thu hút và làm nổi bật giá trị của vị trí công việc.
+      KHÔNG bao gồm bất kỳ tiêu đề nào như "Mô tả công việc", "Yêu cầu", v.v. trong phần kết quả.
+      Trả về kết quả là một đoạn văn liên tục, đã được định dạng với các đoạn văn rõ ràng.
+    `;
+    
+    // Gọi API OpenAI
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { 
+          role: "system", 
+          content: "Bạn là chuyên gia tư vấn nhân sự cao cấp, giỏi viết mô tả công việc chuyên nghiệp, thu hút và tối ưu hóa SEO." 
+        },
+        { 
+          role: "user", 
+          content: prompt 
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+    
+    const improvedDescription = response.choices[0].message.content;
+    
+    // Lưu cache để tái sử dụng (2 ngày)
+    apiCache.set(cacheKey, improvedDescription, 172800);
+    
+    return res.status(200).json({
+      success: true,
+      improvedDescription,
+      originalDescription: job.description
+    });
+    
+  } catch (error) {
+    console.error("AI improve description error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Không thể cải thiện mô tả công việc. Vui lòng thử lại sau.",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Cập nhật mô tả công việc trong database
+ * PUT /api/v1/ai/update-description/:jobId
+ */
+export const updateJobDescription = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { description } = req.body;
+    
+    if (!jobId || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "ID công việc và mô tả mới là bắt buộc"
+      });
+    }
+    
+    // Tìm công việc cần cập nhật
+    const job = await Job.findById(jobId);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy công việc"
+      });
+    }
+    
+    // Kiểm tra quyền cập nhật
+    if (req.id.toString() !== job.created_by.toString() && req.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền cập nhật công việc này"
+      });
+    }
+    
+    // Cập nhật mô tả
+    job.description = description;
+    await job.save();
+    
+    // Xóa cache liên quan
+    apiCache.clear(`summary_${jobId}`);
+    apiCache.clear(`improved_description_${jobId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật mô tả công việc thành công",
+      job
+    });
+    
+  } catch (error) {
+    console.error("Update job description error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Không thể cập nhật mô tả công việc. Vui lòng thử lại sau.",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
