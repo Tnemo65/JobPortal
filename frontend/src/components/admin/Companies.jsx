@@ -7,40 +7,45 @@ import { useNavigate } from 'react-router-dom'
 import useGetAllCompanies from '@/hooks/useGetAllCompanies'
 import { useDispatch } from 'react-redux'
 import { setSearchCompanyByText } from '@/redux/companySlice'
+import { toast } from 'sonner'
 
 const Companies = () => {
-    useGetAllCompanies();
+    // Lấy hàm getAllCompanies từ kết quả trả về của hook
+    const { getAllCompanies } = useGetAllCompanies();
     const [input, setInput] = useState("");
     const navigate = useNavigate();
     const dispatch = useDispatch();
-useEffect(() => {
-    // Kiểm tra cả trường hợp thêm mới và cập nhật
-    const companyChanged = 
-        sessionStorage.getItem('companyAdded') || 
-        sessionStorage.getItem('companyUpdated');
-        
-    if (companyChanged) {
-        // Refresh dữ liệu từ API
-        getAllCompanies(true); // Truyền tham số true để bypass cache
-        
-        // Xóa tất cả các flag để tránh refresh không cần thiết
-        sessionStorage.removeItem('companyAdded');
-        sessionStorage.removeItem('companyUpdated');
-        
-        // Hiển thị thông báo xác nhận
-        const message = sessionStorage.getItem('companyAdded') 
-            ? "Thêm công ty thành công!"
-            : "Cập nhật công ty thành công!";
+    
+    useEffect(() => {
+        // Kiểm tra cả trường hợp thêm mới và cập nhật
+        const companyChanged = 
+            sessionStorage.getItem('companyAdded') || 
+            sessionStorage.getItem('companyUpdated');
             
-        toast.success(message, { 
-            autoClose: 1500,
-            position: "bottom-right" 
-        });
-    }
-}, []);
+        if (companyChanged) {
+            // Refresh dữ liệu từ API
+            getAllCompanies(true); // Truyền tham số true để bypass cache
+            
+            // Xóa tất cả các flag để tránh refresh không cần thiết
+            sessionStorage.removeItem('companyAdded');
+            sessionStorage.removeItem('companyUpdated');
+            
+            // Hiển thị thông báo xác nhận
+            const message = sessionStorage.getItem('companyAdded') 
+                ? "Thêm công ty thành công!"
+                : "Cập nhật công ty thành công!";
+                
+            toast.success(message, { 
+                autoClose: 1500,
+                position: "bottom-right" 
+            });
+        }
+    }, [getAllCompanies]);
+    
     useEffect(()=>{
         dispatch(setSearchCompanyByText(input));
-    },[input]);
+    },[input, dispatch]);
+    
     return (
         <div>
             <Navbar />

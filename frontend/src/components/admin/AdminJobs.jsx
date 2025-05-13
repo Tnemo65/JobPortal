@@ -7,36 +7,41 @@ import { useDispatch } from 'react-redux'
 import AdminJobsTable from './AdminJobsTable'
 import useGetAllAdminJobs from '@/hooks/useGetAllAdminJobs'
 import { setSearchJobByText } from '@/redux/jobSlice'
+import { toast } from 'sonner'
 
 const AdminJobs = () => {
-  useGetAllAdminJobs();
+  // Thêm destructuring để lấy hàm getAllAdminJobs từ hook
+  const { getAllAdminJobs } = useGetAllAdminJobs();
   const [input, setInput] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
-useEffect(() => {
-    const jobChanged = 
-        sessionStorage.getItem('jobAdded') || 
-        sessionStorage.getItem('jobUpdated');
-        
-    if (jobChanged) {
-        getAllAdminJobs(true);
-        
-        sessionStorage.removeItem('jobAdded');
-        sessionStorage.removeItem('jobUpdated');
-        
-        const message = sessionStorage.getItem('jobAdded')
-            ? "Thêm công việc thành công!"
-            : "Cập nhật công việc thành công!";
-            
-        toast.success(message, {
-            autoClose: 1500,
-            position: "bottom-right"
-        });
-    }
-}, []);
+  
+  useEffect(() => {
+      const jobChanged = 
+          sessionStorage.getItem('jobAdded') || 
+          sessionStorage.getItem('jobUpdated');
+          
+      if (jobChanged) {
+          getAllAdminJobs(true);
+          
+          sessionStorage.removeItem('jobAdded');
+          sessionStorage.removeItem('jobUpdated');
+          
+          const message = sessionStorage.getItem('jobAdded')
+              ? "Thêm công việc thành công!"
+              : "Cập nhật công việc thành công!";
+              
+          toast.success(message, {
+              autoClose: 1500,
+              position: "bottom-right"
+          });
+      }
+  }, [getAllAdminJobs]);
+  
   useEffect(() => {
     dispatch(setSearchJobByText(input));
-  }, [input]);
+  }, [input, dispatch]);
+  
   return (
     <div>
       <Navbar />
