@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
-import { JOB_API_END_POINT, API_URL } from '@/utils/constant';
+import { JOB_API_END_POINT, API_BASE } from '@/utils/constant';
 import { toast } from 'sonner';
 import Navbar from '../shared/Navbar';
 import { addAdminJob } from '@/redux/jobSlice';
@@ -85,7 +85,7 @@ const PostJob = () => {
                 
                 // Xóa cache API để đảm bảo dữ liệu mới nhất
                 try {
-                    await axios.post(`${API_URL}/cache/clear`, { type: 'jobs' }, {
+                    await axios.post(`${API_BASE}/cache/clear`, { type: 'jobs' }, {
                         withCredentials: true
                     });
                 } catch (error) {

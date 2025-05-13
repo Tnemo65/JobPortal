@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { COMPANY_API_END_POINT, API_URL } from '@/utils/constant';
+import { COMPANY_API_END_POINT, API_BASE } from '@/utils/constant';
 import useGetCompanyById from '@/hooks/useGetCompanyById';
 import { updateCompany } from '@/redux/companySlice';
 import Navbar from '../shared/Navbar';
@@ -62,7 +62,7 @@ const CompanySetup = () => {
                 
                 // Xóa cache API để đảm bảo dữ liệu mới nhất
                 try {
-                    await axios.post(`${API_URL}/cache/clear`, { type: 'companies' }, {
+                    await axios.post(`${API_BASE}/cache/clear`, { type: 'companies' }, {
                         withCredentials: true
                     });
                 } catch (error) {

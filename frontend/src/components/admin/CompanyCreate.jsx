@@ -5,7 +5,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { COMPANY_API_END_POINT, API_URL } from '@/utils/constant'
+import { COMPANY_API_END_POINT, API_BASE } from '@/utils/constant'
 import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
 import { setSingleCompany, addCompany } from '@/redux/companySlice'
@@ -81,7 +81,7 @@ const CompanyCreate = () => {
                 
                 // Xóa cache API để đảm bảo dữ liệu mới nhất
                 try {
-                    await axios.post(`${API_URL}/cache/clear`, { type: 'companies' }, {
+                    await axios.post(`${API_BASE}/cache/clear`, { type: 'companies' }, {
                         withCredentials: true
                     });
                 } catch (error) {
