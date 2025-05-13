@@ -1,40 +1,44 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { setAllAdminJobs } from '@/redux/jobSlice'; // Sửa từ setAdminJobs thành setAllAdminJobs
-import axios from 'axios';
+import { useState, useEffect } from 'react'
 import { JOB_API_END_POINT } from '@/utils/constant';
+import { toast } from 'sonner';
+import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setAllAdminJobs } from '@/redux/jobSlice';
 
 const useGetAllAdminJobs = () => {
     const [loading, setLoading] = useState(false);
+    const [jobs, setJobs] = useState([]);
     const dispatch = useDispatch();
-    
-    // Cập nhật hàm này để chấp nhận tham số bypass cache
-    const getAllAdminJobs = async (bypassCache = false) => {
+
+    const getAllAdminJobs = async () => {
         try {
             setLoading(true);
-            const url = `${JOB_API_END_POINT}/getadminjobs`;
-            const config = {
-                withCredentials: true,
-                headers: bypassCache ? {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                } : {}
-            };
-            
-            const res = await axios.get(url, config);
+            // Sử dụng axios bình thường thay vì createSecureAxios
+            const res = await axios.get(`${JOB_API_END_POINT}/getadminjobs`, {
+                withCredentials: true
+            });
             
             if (res.data.success) {
-                dispatch(setAllAdminJobs(res.data.jobs)); // Sửa từ setAdminJobs thành setAllAdminJobs
+                setJobs(res.data.jobs);
+                dispatch(setAllAdminJobs(res.data.jobs));
             }
         } catch (error) {
             console.log(error);
+            toast.error(error.response?.data?.message || "Failed to fetch jobs");
         } finally {
             setLoading(false);
         }
+    }
+
+    useEffect(() => {
+        getAllAdminJobs();
+    }, []);
+
+    return {
+        loading,
+        jobs,
+        getAllAdminJobs
     };
-    
-    return { loading, getAllAdminJobs };
-};
+}
 
 export default useGetAllAdminJobs;

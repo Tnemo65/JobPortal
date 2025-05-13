@@ -5,7 +5,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { COMPANY_API_END_POINT, API_BASE, API_URL } from '@/utils/constant'
+import { COMPANY_API_END_POINT } from '@/utils/constant'
 import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
 import { setSingleCompany, addCompany } from '@/redux/companySlice'
@@ -79,22 +79,12 @@ const CompanyCreate = () => {
                 dispatch(setSingleCompany(res.data.company));
                 dispatch(addCompany(res.data.company));
                 
-                // Xóa cache API để đảm bảo dữ liệu mới nhất
-                try {
-                    await axios.post(`${API_URL}/cache/clear`, { type: 'companies' }, {
-                        withCredentials: true
-                    });
-                } catch (error) {
-                    console.log("Cache clear error:", error);
-                }
-                
-                // Lưu flag trong sessionStorage để biết cần refresh
-                sessionStorage.setItem('companyAdded', 'true');
-                
                 toast.success(res.data.message);
                 
-                // Chuyển hướng ngay lập tức, không cần setTimeout
-                navigate("/admin/companies");
+                // Chuyển hướng sau một khoảng thời gian ngắn để đảm bảo Redux đã cập nhật
+                setTimeout(() => {
+                    navigate("/admin/companies");
+                }, 300);
             }
         } catch (error) {
             console.log(error);

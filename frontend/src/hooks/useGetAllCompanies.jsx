@@ -1,40 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'
+import { COMPANY_API_END_POINT } from '@/utils/constant';
+import { toast } from 'sonner';
+import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { setCompanies } from '@/redux/companySlice';
-import axios from 'axios';
-import { COMPANY_API_END_POINT } from '@/utils/constant';
 
 const useGetAllCompanies = () => {
     const [loading, setLoading] = useState(false);
+    const [localCompanies, setLocalCompanies] = useState([]);
     const dispatch = useDispatch();
-    
-    // Cập nhật hàm này để chấp nhận tham số bypass cache
-    const getAllCompanies = async (bypassCache = false) => {
+
+    const getAllCompanies = async () => {
         try {
             setLoading(true);
-            const url = `${COMPANY_API_END_POINT}/get`;
-            const config = {
-                withCredentials: true,
-                headers: bypassCache ? {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                } : {}
-            };
-            
-            const res = await axios.get(url, config);
+            // Sử dụng axios bình thường thay vì createSecureAxios
+            const res = await axios.get(COMPANY_API_END_POINT, {
+                withCredentials: true
+            });
             
             if (res.data.success) {
+                setLocalCompanies(res.data.companies);
+                // Cập nhật Redux store với danh sách công ty
                 dispatch(setCompanies(res.data.companies));
             }
         } catch (error) {
             console.log(error);
+            toast.error(error.response?.data?.message || "Failed to fetch companies");
         } finally {
             setLoading(false);
         }
+    }
+
+    useEffect(() => {
+        getAllCompanies();
+    }, [dispatch]);
+
+    return {
+        loading,
+        companies: localCompanies,
+        getAllCompanies
     };
-    
-    return { loading, getAllCompanies };
-};
+}
 
 export default useGetAllCompanies;

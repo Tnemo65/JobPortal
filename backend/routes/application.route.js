@@ -28,7 +28,7 @@ router.route("/:id/applicants").get(
     isAuthenticated, 
     checkRole(['admin']), 
     apiLimiter,
-    apiCache.middleware('2 minutes'),
+    apiCache.middleware('10 seconds'),
     getApplicants
 );
 
