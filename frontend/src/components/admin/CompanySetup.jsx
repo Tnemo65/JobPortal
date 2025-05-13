@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react'
-import Navbar from '../shared/Navbar'
-import { Button } from '../ui/button'
-import { ArrowLeft, Loader2 } from 'lucide-react'
-import { Label } from '../ui/label'
-import { Input } from '../ui/input'
-import axios from 'axios'
-import { COMPANY_API_END_POINT } from '@/utils/constant'
-import { useNavigate, useParams } from 'react-router-dom'
-import { toast } from 'sonner'
-import { useSelector } from 'react-redux'
-import useGetCompanyById from '@/hooks/useGetCompanyById'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { COMPANY_API_END_POINT, API_URL } from '@/utils/constant';
+import useGetCompanyById from '@/hooks/useGetCompanyById';
+import { updateCompany } from '@/redux/companySlice';
+import Navbar from '../shared/Navbar';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Button } from '../ui/button';
+import { Loader2 } from 'lucide-react';
 
 const CompanySetup = () => {
     const params = useParams();
@@ -24,6 +26,7 @@ const CompanySetup = () => {
     const {singleCompany} = useSelector(store=>store.company);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
@@ -52,25 +55,29 @@ const CompanySetup = () => {
                 },
                 withCredentials: true
             });
-if (res.data.success) {
-    // Xóa cache API để đảm bảo dữ liệu mới nhất
-    try {
-        await axios.post(`${import.meta.env.VITE_API_URL}/cache/clear`, { type: 'companies' }, {
-            withCredentials: true
-        });
-    } catch (error) {
-        console.log("Cache clear error:", error);
-    }
-    
-    // Lưu flag trong sessionStorage để biết cần refresh
-    sessionStorage.setItem('companyUpdated', 'true');
-    
-    toast.success(res.data.message);
-    navigate("/admin/companies");
-}
+            
+            if (res.data.success) {
+                // Cập nhật Redux store trực tiếp
+                dispatch(updateCompany(res.data.company));
+                
+                // Xóa cache API để đảm bảo dữ liệu mới nhất
+                try {
+                    await axios.post(`${API_URL}/cache/clear`, { type: 'companies' }, {
+                        withCredentials: true
+                    });
+                } catch (error) {
+                    console.log("Cache clear error:", error);
+                }
+                
+                // Lưu flag trong sessionStorage để biết cần refresh
+                sessionStorage.setItem('companyUpdated', 'true');
+                
+                toast.success(res.data.message);
+                navigate("/admin/companies");
+            }
         } catch (error) {
             console.log(error);
-            toast.error(error.response.data.message);
+            toast.error(error.response?.data?.message);
         } finally {
             setLoading(false);
         }
@@ -82,7 +89,7 @@ if (res.data.success) {
             description: singleCompany.description || "",
             website: singleCompany.website || "",
             location: singleCompany.location || "",
-            file: singleCompany.file || null
+            file: null
         })
     },[singleCompany]);
 
@@ -90,68 +97,89 @@ if (res.data.success) {
         <div>
             <Navbar />
             <div className='max-w-xl mx-auto my-10'>
-                <form onSubmit={submitHandler}>
-                    <div className='flex items-center gap-5 p-8'>
-                        <Button onClick={() => navigate("/admin/companies")} variant="outline" className="flex items-center gap-2 text-gray-500 font-semibold">
-                            <ArrowLeft />
-                            <span>Back</span>
+                <form onSubmit={submitHandler} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
+                    <div>
+                        <Label htmlFor="name">Company Name</Label>
+                        <Input 
+                            id="name"
+                            className='mt-1'
+                            name="name"
+                            value={input.name}
+                            onChange={changeEventHandler}
+                            required
+                        />
+                    </div>
+                    
+                    <div>
+                        <Label htmlFor="description">Company Description</Label>
+                        <Textarea
+                            id="description"
+                            className='mt-1'
+                            name="description"
+                            value={input.description}
+                            onChange={changeEventHandler}
+                        />
+                    </div>
+                    
+                    <div>
+                        <Label htmlFor="website">Website</Label>
+                        <Input 
+                            id="website"
+                            className='mt-1'
+                            name="website"
+                            value={input.website}
+                            onChange={changeEventHandler}
+                        />
+                    </div>
+                    
+                    <div>
+                        <Label htmlFor="location">Location</Label>
+                        <Input 
+                            id="location"
+                            className='mt-1'
+                            name="location"
+                            value={input.location}
+                            onChange={changeEventHandler}
+                        />
+                    </div>
+                    
+                    <div>
+                        <Label htmlFor="file">Logo</Label>
+                        <Input 
+                            id="file"
+                            className='mt-1'
+                            name="file"
+                            type="file"
+                            accept='image/*'
+                            onChange={changeFileHandler}
+                        />
+                    </div>
+                    
+                    <div className='flex items-center gap-3 pt-4'>
+                        <Button 
+                            variant="outline" 
+                            type="button"
+                            onClick={() => navigate("/admin/companies")}
+                        >
+                            Cancel
                         </Button>
-                        <h1 className='font-bold text-xl'>Company Setup</h1>
+                        <Button 
+                            type="submit"
+                            disabled={loading}
+                            className="bg-accent hover:bg-accent/90"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Updating...
+                                </>
+                            ) : "Update Company"}
+                        </Button>
                     </div>
-                    <div className='grid grid-cols-2 gap-4'>
-                        <div>
-                            <Label>Company Name</Label>
-                            <Input
-                                type="text"
-                                name="name"
-                                value={input.name}
-                                onChange={changeEventHandler}
-                            />
-                        </div>
-                        <div>
-                            <Label>Description</Label>
-                            <Input
-                                type="text"
-                                name="description"
-                                value={input.description}
-                                onChange={changeEventHandler}
-                            />
-                        </div>
-                        <div>
-                            <Label>Website</Label>
-                            <Input
-                                type="text"
-                                name="website"
-                                value={input.website}
-                                onChange={changeEventHandler}
-                            />
-                        </div>
-                        <div>
-                            <Label>Location</Label>
-                            <Input
-                                type="text"
-                                name="location"
-                                value={input.location}
-                                onChange={changeEventHandler}
-                            />
-                        </div>
-                        <div>
-                            <Label>Logo</Label>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={changeFileHandler}
-                            />
-                        </div>
-                    </div>
-                    {
-                        loading ? <Button className="w-full my-4"> <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Please wait </Button> : <Button type="submit" className="w-full my-4">Update</Button>
-                    }
                 </form>
             </div>
-
         </div>
-    )
-}
+    );
+};
 
-export default CompanySetup
+export default CompanySetup;
