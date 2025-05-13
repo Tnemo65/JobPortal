@@ -123,8 +123,18 @@ const PostJob = () => {
                 // Cập nhật Redux store trực tiếp với công việc mới
                 dispatch(addAdminJob(res.data.job));
                 
-                // Thêm timeout ngắn để đảm bảo redux store được cập nhật
-                setTimeout(() => {
+    // Xóa cache API để đảm bảo dữ liệu mới nhất
+    try {
+        await axios.post(`${API_URL}/cache/clear`, { type: 'jobs' }, {
+            withCredentials: true
+        });
+    } catch (error) {
+        console.log("Cache clear error:", error);
+    }
+    
+    // Lưu flag trong sessionStorage để biết cần refresh
+    sessionStorage.setItem('jobAdded', 'true');
+                    setTimeout(() => {
                     navigate("/admin/jobs");
                 }, 300);
             }

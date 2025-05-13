@@ -52,10 +52,22 @@ const CompanySetup = () => {
                 },
                 withCredentials: true
             });
-            if (res.data.success) {
-                toast.success(res.data.message);
-                navigate("/admin/companies");
-            }
+if (res.data.success) {
+    // Xóa cache API để đảm bảo dữ liệu mới nhất
+    try {
+        await axios.post(`${import.meta.env.VITE_API_URL}/cache/clear`, { type: 'companies' }, {
+            withCredentials: true
+        });
+    } catch (error) {
+        console.log("Cache clear error:", error);
+    }
+    
+    // Lưu flag trong sessionStorage để biết cần refresh
+    sessionStorage.setItem('companyUpdated', 'true');
+    
+    toast.success(res.data.message);
+    navigate("/admin/companies");
+}
         } catch (error) {
             console.log(error);
             toast.error(error.response.data.message);

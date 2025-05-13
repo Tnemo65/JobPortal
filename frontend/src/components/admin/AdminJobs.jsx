@@ -13,7 +13,27 @@ const AdminJobs = () => {
   const [input, setInput] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+useEffect(() => {
+    const jobChanged = 
+        sessionStorage.getItem('jobAdded') || 
+        sessionStorage.getItem('jobUpdated');
+        
+    if (jobChanged) {
+        getAllAdminJobs(true);
+        
+        sessionStorage.removeItem('jobAdded');
+        sessionStorage.removeItem('jobUpdated');
+        
+        const message = sessionStorage.getItem('jobAdded')
+            ? "Thêm công việc thành công!"
+            : "Cập nhật công việc thành công!";
+            
+        toast.success(message, {
+            autoClose: 1500,
+            position: "bottom-right"
+        });
+    }
+}, []);
   useEffect(() => {
     dispatch(setSearchJobByText(input));
   }, [input]);

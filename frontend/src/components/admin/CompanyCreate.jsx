@@ -78,7 +78,18 @@ const CompanyCreate = () => {
                 // Cập nhật Redux store trực tiếp với công ty mới
                 dispatch(setSingleCompany(res.data.company));
                 dispatch(addCompany(res.data.company));
-                
+                    // Xóa cache API để đảm bảo dữ liệu mới nhất
+    try {
+        await axios.post(`${API_URL}/cache/clear`, { type: 'companies' }, {
+            withCredentials: true
+        });
+    } catch (error) {
+        console.log("Cache clear error:", error);
+    }
+    
+    // Lưu flag trong sessionStorage để biết cần refresh
+    sessionStorage.setItem('companyAdded', 'true');
+    
                 toast.success(res.data.message);
                 
                 // Chuyển hướng sau một khoảng thời gian ngắn để đảm bảo Redux đã cập nhật
