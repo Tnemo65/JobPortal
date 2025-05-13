@@ -6,6 +6,7 @@ const API_BASE = import.meta.env.VITE_API_URL ||
 
 // Expose this for other imports
 export { API_BASE };
+export const API_URL = API_BASE;
 
 export const USER_API_END_POINT = `${API_BASE}/user`;
 export const JOB_API_END_POINT = `${API_BASE}/job`;

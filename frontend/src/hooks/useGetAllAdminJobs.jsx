@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { setAdminJobs } from '@/redux/jobSlice';
+import { setAllAdminJobs } from '@/redux/jobSlice'; // Sửa từ setAdminJobs thành setAllAdminJobs
 import axios from 'axios';
 import { JOB_API_END_POINT } from '@/utils/constant';
 
@@ -25,7 +25,7 @@ const useGetAllAdminJobs = () => {
             const res = await axios.get(url, config);
             
             if (res.data.success) {
-                dispatch(setAdminJobs(res.data.jobs));
+                dispatch(setAllAdminJobs(res.data.jobs)); // Sửa từ setAdminJobs thành setAllAdminJobs
             }
         } catch (error) {
             console.log(error);
