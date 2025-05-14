@@ -15,8 +15,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
     res.cookie("access_token", accessToken, { 
         maxAge: 60 * 60 * 1000, // 1 hour
         httpOnly: true, 
-        secure: false, // Must be false for HTTP
-        sameSite: 'lax', // Best setting for HTTP
+        secure: true, // Set to true for HTTPS
+        sameSite: 'strict', // Best setting for HTTPS
         path: '/',
         domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
     });
@@ -26,8 +26,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         res.cookie("refresh_token", refreshToken, { 
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             httpOnly: true, 
-            secure: false, // Must be false for HTTP
-            sameSite: 'lax', // Best setting for HTTP
+            secure: true, // Set to true for HTTPS
+            sameSite: 'strict', // Best setting for HTTPS
             path: '/',
             domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
         });
@@ -310,7 +310,7 @@ export const ssoAuthSuccess = async (req, res) => {
         return;
     }
     
-    const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    const frontendURL = process.env.FRONTEND_URL || 'https://jobmarket.fun';
     console.log('Using frontend URL for redirect:', frontendURL);
     
     try {
@@ -397,7 +397,7 @@ export const ssoAuthFailure = (req, res) => {
         return;
     }
     
-    const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    const frontendURL = process.env.FRONTEND_URL || 'https://jobmarket.fun';
     
     // Log thông tin chi tiết hơn về lỗi
     const error = req.query.error || 'Unknown error';

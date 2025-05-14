@@ -15,7 +15,7 @@ export const basicLimiter = rateLimit({
     message: { message: "Quá nhiều yêu cầu, vui lòng thử lại sau.", success: false },
     // Thêm logging để debug trong môi trường development
     skip: (req) => {
-        if (isDevelopment && req.headers.origin === 'http://localhost:5173') {
+        if (isDevelopment && req.headers.origin === 'https://localhost:5173') {
             return Math.random() > 0.1; // Log khoảng 10% request trong development
         }
         return false;
@@ -44,7 +44,7 @@ export const apiLimiter = rateLimit({
     message: { message: "Đã vượt quá giới hạn API, vui lòng thử lại sau.", success: false },
     skip: (req) => {
         // Trong môi trường development, bỏ qua rate limit cho frontend localhost
-        return isDevelopment && req.headers.origin === 'http://localhost:5173';
+        return isDevelopment && req.headers.origin === 'https://localhost:5173';
     },
     validate: false,
     trustProxy: true, // Enable trust proxy for cloud environments behind load balancers

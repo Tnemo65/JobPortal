@@ -12,23 +12,23 @@ export const setupGKEEnvironment = () => {
     
     // Set default URLs if not provided
     if (!process.env.FRONTEND_URL) {
-      process.env.FRONTEND_URL = 'http://jobmarket.fun';
+      process.env.FRONTEND_URL = 'https://jobmarket.fun';
       console.log(`Set default FRONTEND_URL: ${process.env.FRONTEND_URL}`);
     }
     
     if (!process.env.BASE_URL) {
-      process.env.BASE_URL = 'http://34.81.121.101';
+      process.env.BASE_URL = 'https://34.81.121.101';
       console.log(`Set default BASE_URL: ${process.env.BASE_URL}`);
     }
     
-    // Force secure cookies off if using HTTP in GKE
-    if (process.env.DISABLE_SECURE_COOKIES === 'true' || 
-        (!process.env.FRONTEND_URL?.startsWith('https') && 
-         !process.env.BASE_URL?.startsWith('https'))) {
+    // Enable secure cookies for HTTPS in GKE
+    if (process.env.DISABLE_SECURE_COOKIES === 'true') {
       process.env.SECURE_COOKIES = 'false';
-      console.log("Secure cookies disabled for HTTP connections in GKE");
+      console.log("Warning: Secure cookies have been manually disabled");
     } else {
+      // Since we're using HTTPS everywhere now
       process.env.SECURE_COOKIES = 'true';
+      console.log("Secure cookies enabled for HTTPS connections in GKE");
     }
     
     console.log("GKE environment variables configured successfully");
@@ -37,11 +37,11 @@ export const setupGKEEnvironment = () => {
 
 // Export a function to check if cookies should be secure
 export const shouldUseCookiesSecure = () => {
-  // In GKE with HTTP, we disable secure cookies
+  // Only disable secure cookies if explicitly set to false
   if (process.env.SECURE_COOKIES === 'false') {
     return false;
   }
   
-  // Otherwise use secure in production
-  return process.env.NODE_ENV === 'production';
+  // Always use secure cookies with HTTPS
+  return true;
 };

@@ -8,5 +8,5 @@ cd ../frontend
 start cmd /k "echo Starting frontend server... && npm run dev"
 
 echo Both servers are starting up. Please wait...
-echo Backend will be available at http://localhost:8080
-echo Frontend will be available at http://localhost:5173
+echo Backend will be available at https://localhost:8080
+echo Frontend will be available at https://localhost:5173

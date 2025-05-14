@@ -39,8 +39,8 @@ const oauthDebugMiddleware = (req, res, next) => {
 
 // Test route for OAuth configuration
 router.route("/auth/test").get((req, res) => {
-    const callbackUrl = process.env.OAUTH_CALLBACK_URL || 'http://jobmarket.fun/api/v1/user/auth/google/callback';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+    const callbackUrl = process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://jobmarket.fun';
     const googleClientId = process.env.GOOGLE_CLIENT_ID ? "Configured" : "Not configured";
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ? "Configured" : "Not configured";
     
@@ -99,7 +99,7 @@ router.route("/auth/google/callback").get(
         console.log("Received Google auth callback with query params:", req.query);
         
         // Lấy frontend URL từ environment
-        const frontendURL = process.env.FRONTEND_URL || 'http://jobmarket.fun';
+        const frontendURL = process.env.FRONTEND_URL || 'https://jobmarket.fun';
         
         try {
             // Kiểm tra state nếu có để ngăn CSRF attacks

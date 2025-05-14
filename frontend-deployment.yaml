@@ -34,13 +34,25 @@ spec:
             - name: PORT
               value: "3000"
             - name: VITE_API_URL
-              value: "http://jobmarket.fun/api/v1"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: VITE_API_URL
             - name: BASE_URL
-              value: "http://jobmarket.fun"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: BASE_URL
             - name: NODE_ENV
-              value: "production"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: NODE_ENV
             - name: VITE_FRONTEND_URL
-              value: "http://jobmarket.fun"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: VITE_FRONTEND_URL
           readinessProbe:
             httpGet:
               path: /
