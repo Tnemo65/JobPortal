@@ -23,7 +23,7 @@ spec:
             name: nginx-config
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:805cd785-60bc-4c48-ba9f-50b0f9c2453d
+          image: gcr.io/empyrean-harbor-456906-s2/backend:8c866768-cc75-4dd6-8501-8bd68f4edf50
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
