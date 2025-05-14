@@ -39,6 +39,17 @@ api.interceptors.request.use(
       };
       delete config.bypassCache; // Remove flag to avoid sending as query param
     }
+    
+    // Force HTTPS: ensure URLs always use HTTPS protocol to prevent mixed content errors
+    if (config.url && config.url.startsWith('http:')) {
+      config.url = config.url.replace('http:', 'https:');
+    }
+    
+    // Ensure baseURL uses HTTPS
+    if (config.baseURL && config.baseURL.startsWith('http:')) {
+      config.baseURL = config.baseURL.replace('http:', 'https:');
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)

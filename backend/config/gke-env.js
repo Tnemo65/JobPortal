@@ -14,11 +14,23 @@ export const setupGKEEnvironment = () => {
     if (!process.env.FRONTEND_URL) {
       process.env.FRONTEND_URL = 'https://jobmarket.fun';
       console.log(`Set default FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+    } else if (process.env.FRONTEND_URL.startsWith('http:')) {
+      process.env.FRONTEND_URL = process.env.FRONTEND_URL.replace('http:', 'https:');
+      console.log(`Enforced HTTPS for FRONTEND_URL: ${process.env.FRONTEND_URL}`);
     }
     
     if (!process.env.BASE_URL) {
       process.env.BASE_URL = 'https://34.81.121.101';
       console.log(`Set default BASE_URL: ${process.env.BASE_URL}`);
+    } else if (process.env.BASE_URL.startsWith('http:')) {
+      process.env.BASE_URL = process.env.BASE_URL.replace('http:', 'https:');
+      console.log(`Enforced HTTPS for BASE_URL: ${process.env.BASE_URL}`);
+    }
+    
+    // Ensure API URL is using HTTPS
+    if (process.env.VITE_API_URL && process.env.VITE_API_URL.startsWith('http:')) {
+      process.env.VITE_API_URL = process.env.VITE_API_URL.replace('http:', 'https:');
+      console.log(`Enforced HTTPS for VITE_API_URL: ${process.env.VITE_API_URL}`);
     }
     
     // Enable secure cookies for HTTPS in GKE
