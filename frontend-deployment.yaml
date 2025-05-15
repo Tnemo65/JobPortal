@@ -21,8 +21,6 @@ spec:
         - name: nginx-config
           configMap:
             name: nginx-config
-        - name: empty-dir
-          emptyDir: {}
       containers:
         - name: frontend
           image: gcr.io/empyrean-harbor-456906-s2/frontend:76e0cb38-b900-4bac-8bac-dab95066a7dd
@@ -31,9 +29,8 @@ spec:
             - containerPort: 3000
           volumeMounts:
             - name: nginx-config
-              mountPath: /etc/nginx/custom-config/
-            - name: empty-dir
-              mountPath: /etc/nginx/conf.d/
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
           resources:
             requests:
               cpu: "100m"
@@ -44,12 +41,6 @@ spec:
           env:
             - name: PORT
               value: "3000"
-            - name: NGINX_ENTRYPOINT_QUIET_LOGS
-              value: "1"
-            - name: NGINX_ENVSUBST_TEMPLATE_DIR
-              value: "/etc/nginx/custom-config"
-            - name: NGINX_ENVSUBST_OUTPUT_DIR
-              value: "/etc/nginx/conf.d"
             - name: VITE_API_URL
               valueFrom:
                 secretKeyRef:
@@ -71,9 +62,9 @@ spec:
                   name: app-secrets
                   key: VITE_FRONTEND_URL
           readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-              scheme: HTTP
-            initialDelaySeconds: 10
-            periodSeconds: 5
+          httpGet:
+            path: /healthz
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
