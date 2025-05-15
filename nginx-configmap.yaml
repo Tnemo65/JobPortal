@@ -4,7 +4,7 @@ metadata:
   name: nginx-config
   namespace: default
 data:
-  default.conf.template: |
+  nginx: |
     # Map để xác định kết nối HTTPS từ Cloudflare hoặc X-Forwarded-Proto
     map $http_cf_visitor $https_forwarded_cf {
         default "";

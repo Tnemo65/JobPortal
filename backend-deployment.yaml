@@ -29,9 +29,8 @@ spec:
             - containerPort: 8080
           volumeMounts:
             - name: nginx-config
-              # mountPath: D:\GitHub\JobPortal\frontend\nginx.conf
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: nginx.conf
+              mountPath: /etc/nginx/conf.d/
+              subPath: nginx
           resources:
             requests:
               cpu: "100m"
