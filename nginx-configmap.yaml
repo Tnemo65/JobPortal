@@ -4,7 +4,7 @@ metadata:
   name: nginx-config
   namespace: default
 data:
-  nginx.conf: |
+  default.conf.template: |
     # Map để xác định kết nối HTTPS từ Cloudflare hoặc X-Forwarded-Proto
     map $http_cf_visitor $https_forwarded_cf {
         default "";
@@ -27,6 +27,12 @@ data:
         ~*kube-probe 1;
     }
 
+    # Kết hợp điều kiện redirect và probe check
+    map "$need_redirect:$is_kube_probe" $do_redirect {
+        "1:0" 1;  # Cần redirect và không phải là kube-probe
+        default 0;
+    }
+
     server {
         listen 3000;
         server_name _;
@@ -39,11 +45,9 @@ data:
             return 200 "healthy\n";
         }
 
-        # Chỉ redirect khi không phải là kube-probe
-        if ($need_redirect = 1) {
-            if ($is_kube_probe = 0) {
-                return 301 https://$host$request_uri;
-            }
+        # Sử dụng biến đã kết hợp cho điều kiện redirect
+        if ($do_redirect = 1) {
+            return 301 https://$host$request_uri;
         }
 
         root /usr/share/nginx/html;
