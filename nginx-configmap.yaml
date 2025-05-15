@@ -2,10 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nginx-config
-  namespace: default
 data:
   nginx: |
-    # Map để xác định kết nối HTTPS từ Cloudflare hoặc X-Forwarded-Proto
+    # Các map directive phải ở http block (được include hợp lệ trong conf.d/)
     map $http_cf_visitor $https_forwarded_cf {
         default "";
         ~*'"scheme":"https"' on;
@@ -21,15 +20,13 @@ data:
         ~*on 0;
     }
     
-    # Xác định user-agent của Kubernetes probe
     map $http_user_agent $is_kube_probe {
         default 0;
         ~*kube-probe 1;
     }
 
-    # Kết hợp điều kiện redirect và probe check
     map "$need_redirect:$is_kube_probe" $do_redirect {
-        "1:0" 1;  # Cần redirect và không phải là kube-probe
+        "1:0" 1;
         default 0;
     }
 
@@ -37,15 +34,12 @@ data:
         listen 3000;
         server_name _;
 
-        # Route đặc biệt cho Kubernetes readiness probe
-        # Luôn trả về 200 OK cho probe, không bị redirect
         location = /health {
             access_log off;
             add_header Content-Type text/plain;
             return 200 "healthy\n";
         }
 
-        # Sử dụng biến đã kết hợp cho điều kiện redirect
         if ($do_redirect = 1) {
             return 301 https://$host$request_uri;
         }
@@ -53,20 +47,17 @@ data:
         root /usr/share/nginx/html;
         index index.html;
 
-        # Cấu hình bảo mật
         add_header X-Frame-Options "SAMEORIGIN";
         add_header X-Content-Type-Options "nosniff";
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self' https://jobmarket.fun wss://jobmarket.fun https://api.jobmarket.fun; frame-ancestors 'self';";
 
-        # Cấu hình xử lý SPA
         location / {
             try_files $uri $uri/ /index.html;
             expires 1d;
             add_header Cache-Control "public, max-age=86400, must-revalidate";
         }
 
-        # API calls đến backend
         location /api/ {
             proxy_pass http://backend/api/;
             proxy_set_header Host $host;
@@ -76,17 +67,14 @@ data:
             proxy_read_timeout 90;
         }
 
-        # Xử lý static files
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
             expires 30d;
             add_header Cache-Control "public, max-age=2592000";
             try_files $uri =404;
         }
 
-        # Xử lý 404 errors
         error_page 404 =200 /index.html;
         
-        # Enable gzip compression
         gzip on;
         gzip_vary on;
         gzip_min_length 10240;
