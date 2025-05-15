@@ -1,4 +1,3 @@
-import React from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Navbar from './components/shared/Navbar'
 import Login from './components/auth/Login'
@@ -17,7 +16,8 @@ import Applicants from './components/admin/Applicants'
 import ProtectedRoute from './components/admin/ProtectedRoute'
 import SavedJobs from './components/SavedJobs'
 import SSOCallback from './components/auth/SSOCallback'
-import { store } from './redux/store'
+import { PersistGate } from 'redux-persist/integration/react'
+import { persistor } from './redux/store'
 import useAuthCheck from './hooks/useAuthCheck'
 import { Loader2 } from 'lucide-react'
 
@@ -92,22 +92,7 @@ function App() {
   const { checkingAuth } = useAuthCheck();
   
   // Hiển thị loading khi đang kiểm tra trạng thái đăng nhập
-  // Giới hạn thời gian loading tối đa là 3 giây
-  const [forceLoad, setForceLoad] = React.useState(false);
-  
-  React.useEffect(() => {
-    // Nếu sau 3 giây vẫn đang loading, bắt buộc hiển thị ứng dụng
-    const timer = setTimeout(() => {
-      if (checkingAuth) {
-        console.log("Force loading app after timeout");
-        setForceLoad(true);
-      }
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, [checkingAuth]);
-  
-  if (checkingAuth && !forceLoad) {
+  if (checkingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -120,7 +105,9 @@ function App() {
   
   return (
     <div>
-      <RouterProvider router={appRouter} />
+      <PersistGate loading={null} persistor={persistor}>
+        <RouterProvider router={appRouter} />
+      </PersistGate>
     </div>
   )
 }

@@ -13,10 +13,11 @@ const SSOCallback = () => {
     const [searchParams] = useSearchParams();
     const success = searchParams.get('success');
     const error = searchParams.get('error');
-    const [status, setStatus] = useState('loading');
+    const [status, setStatus] = useState('loading'); // loading, success, error
     const requestTimeoutRef = useRef(null);
     
     useEffect(() => {
+        // Clean up loading state if component unmounts
         return () => {
             dispatch(setLoading(false));
             if (requestTimeoutRef.current) {
@@ -28,39 +29,23 @@ const SSOCallback = () => {
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
+                // Set loading state
                 dispatch(setLoading(true));
                 
+                // Set up timeout for the request
                 const controller = new AbortController();
                 requestTimeoutRef.current = setTimeout(() => controller.abort(), 15000);
                 
                 if (success === 'true') {
-                    // Small delay to ensure cookies are properly set
-                // Add delay to ensure cookies are set before making request
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                console.log('Making profile request with credentials');
-                
-                    // Log cookie status for debugging
-                    console.log('Cookies available:', document.cookie ? 'Yes' : 'No');
-                    console.log('API endpoint:', `${USER_API_END_POINT}/sso/profile`);
-                    console.log('USER_API_END_POINT:', USER_API_END_POINT);
-                    console.log('Making profile request to:', `${USER_API_END_POINT}/sso/profile`);
-                    console.log('Cookie status:', document.cookie ? 'Cookies present' : 'No cookies');
-    
-                    // Get user profile using the cookies that were set
+                    // Get user profile using the cookies that were set by the backend
                     const res = await axios.get(`${USER_API_END_POINT}/sso/profile`, {
-                        withCredentials: true, // Important for cookies
-                        signal: controller.signal,
-                        headers: {
-                            'Cache-Control': 'no-cache',
-                            'Pragma': 'no-cache'
-                        }
+                        withCredentials: true,
+                        signal: controller.signal
                     });
                     
                     clearTimeout(requestTimeoutRef.current);
                     
                     if (res.data.success) {
-                        // Store only user data in Redux, not tokens
                         dispatch(setUser(res.data.user));
                         toast.success(`Xin chào ${res.data.user.fullname}`);
                         setStatus('success');
@@ -72,11 +57,12 @@ const SSOCallback = () => {
                             } else {
                                 navigate('/');
                             }
-                        }, 1500);
+                        }, 1500); // Short delay to show success state
                     } else {
                         throw new Error('Không thể lấy thông tin người dùng');
                     }
                 } else {
+                    // Handle authentication error
                     console.error('SSO authentication error:', error);
                     toast.error(decodeURIComponent(error || 'Đăng nhập thất bại'));
                     setStatus('error');
@@ -89,17 +75,12 @@ const SSOCallback = () => {
                     toast.error("Quá thời gian kết nối. Vui lòng thử lại sau.");
                 } else {
                     toast.error(err.response?.data?.message || err.message || 'Đăng nhập không thành công');
-                    
-                    // If unauthorized, could be a CORS or cookie issue
-                    if (err.response?.status === 401) {
-                        console.error('Authentication failed - cookies may not be properly set');
-                        console.log('Cookie settings issue detected');
-                    }
                 }
                 
                 setStatus('error');
                 setTimeout(() => navigate('/login'), 3000);
             } finally {
+                // Make sure loading state is reset
                 dispatch(setLoading(false));
             }
         };

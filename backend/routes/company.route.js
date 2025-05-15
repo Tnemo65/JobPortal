@@ -5,7 +5,7 @@ import checkOwnership from "../middlewares/checkOwnership.js";
 import { getCompany, getCompanyById, registerCompany, updateCompany } from "../controllers/company.controller.js";
 import { singleUpload } from "../middlewares/mutler.js";
 import { apiLimiter } from "../middlewares/rate-limiter.js";
-import { apiCache } from "../utils/api-cache.js";
+import { apiCache } from "../utils/redis-cache.js";
 
 const router = express.Router();
 

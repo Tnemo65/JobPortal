@@ -60,11 +60,11 @@ const Login = () => {
         try {
             dispatch(setLoading(true));
             
-            // Use our HTTP-only cookie authentication
+            // Log in using our API utility which sends cookies automatically
             const res = await api.post('/user/login', input);
             
             if (res.data.success) {
-                // Store only user info in Redux - authentication is handled by HTTP-only cookies
+                // Just update Redux with user info - token is handled by HTTP-only cookies
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message);
                 navigate("/");
@@ -78,19 +78,8 @@ const Login = () => {
     };
 
     const handleGoogleLogin = () => {
-        try {
-            toast.info("Đang chuyển hướng đến đăng nhập Google...");
-            console.log("Redirecting to Google OAuth:", `${USER_API_END_POINT}/auth/google`);
-            const redirectUrl = `${USER_API_END_POINT}/auth/google`;
-            
-            // Add a brief delay for the toast to show
-            setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, 500);
-        } catch (error) {
-            console.error("Google login redirect error:", error);
-            toast.error("Không thể kết nối đến dịch vụ đăng nhập Google");
-        }
+        const redirectUrl = `${USER_API_END_POINT}/auth/google`;
+        window.location.href = redirectUrl;
     }
 
     useEffect(() => {

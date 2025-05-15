@@ -17,20 +17,12 @@ spec:
       labels:
         app: backend
     spec:
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: nginx-config
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:76e0cb38-b900-4bac-8bac-dab95066a7dd
+          image: gcr.io/empyrean-harbor-456906-s2/backend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: nginx
           resources:
             requests:
               cpu: "100m"
@@ -91,65 +83,26 @@ spec:
                   name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
             - name: BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: BASE_URL
+              value: "http://jobmarket.fun"
             - name: FRONTEND_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: FRONTEND_URL
+              value: "http://jobmarket.fun"
+            - name: REDIS_URL
+              value: "redis://10.174.181.3:6379"
             - name: USE_SHARDING
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: USE_SHARDING
-            - name: OAUTH_CALLBACK_URL
+            - name: USE_REDIS_CACHE
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: OAUTH_CALLBACK_URL
-            - name: COOKIE_DOMAIN
+                  key: USE_REDIS_CACHE
+            - name: USE_REDIS_SESSIONS
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: COOKIE_DOMAIN
-            - name: REFRESH_TOKEN_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: REFRESH_TOKEN_SECRET
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: OPENAI_API_KEY
-            - name: RATE_LIMIT_WINDOW_MS
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: RATE_LIMIT_WINDOW_MS
-            - name: RATE_LIMIT_MAX
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: RATE_LIMIT_MAX
-            - name: AUTH_RATE_LIMIT_WINDOW_MS
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: AUTH_RATE_LIMIT_WINDOW_MS
-            - name: AUTH_RATE_LIMIT_MAX
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: AUTH_RATE_LIMIT_MAX
-            - name: CACHE_TTL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: CACHE_TTL
+                  key: USE_REDIS_SESSIONS
           readinessProbe:
             httpGet:
               path: /health
@@ -162,3 +115,4 @@ spec:
               port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
+            

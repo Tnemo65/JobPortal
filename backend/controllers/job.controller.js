@@ -1,7 +1,6 @@
 import { Application } from "../models/application.model.js";
 import { Company } from "../models/company.model.js";
 import { Job } from "../models/job.model.js";
-import { generateJobSummary } from "./ai.controller.js";
 
 export const postJob = async (req, res) => {
     try {
@@ -76,14 +75,6 @@ export const postJob = async (req, res) => {
             created_by: userId
         });
 
-    // Tạo tóm tắt không đồng bộ để không làm chậm API
-    generateJobSummary(newJob._id).catch(err => 
-      console.error("Error generating job summary:", err)
-    );
-
-
-
-
         return res.status(201).json({ 
             job: newJob, 
             message: "Đăng tin tuyển dụng thành công",
@@ -125,6 +116,7 @@ export const getAllJobs = async (req, res) => {
                 ] }
             ]
         };
+
         // Define fields to select - only what's needed
         const projection = {
             title: 1,

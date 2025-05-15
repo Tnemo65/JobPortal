@@ -37,24 +37,9 @@ const Navbar = () => {
         const fetchNotifications = async () => {
             if (!user) return;
             try {
-                // Thêm timeout để đảm bảo token refresh đã hoàn thành nếu cần
-                setTimeout(async () => {
-                    try {
-                        // Sử dụng đường dẫn đầy đủ và đảm bảo withCredentials được thiết lập
-                        const res = await api.get(`${USER_API_END_POINT}/notifications`, {
-                            withCredentials: true,
-                            headers: {
-                                'Cache-Control': 'no-cache',
-                                'Pragma': 'no-cache'
-                            }
-                        });
-                        if (res.data.success) setNotifications(res.data.notifications);
-                    } catch (innerErr) {
-                        console.log('Failed to fetch notifications after delay:', innerErr.message);
-                    }
-                }, 500);
+                const res = await api.get(`/user/notifications`);
+                if (res.data.success) setNotifications(res.data.notifications);
             } catch (err) {
-                console.log('Failed to fetch notifications:', err.message);
                 // silent
             }
         };
@@ -109,6 +94,10 @@ const Navbar = () => {
             if (res.data.success) {
                 // Reset user state in Redux store
                 dispatch(setUser(null));
+                
+                // Clear any local storage items if they exist (for backward compatibility)
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 
                 // Give feedback to the user
                 toast.success(res.data.message || "Đăng xuất thành công");

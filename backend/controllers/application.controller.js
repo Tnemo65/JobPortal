@@ -2,7 +2,7 @@ import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
 import { User } from "../models/user.model.js";
 import { Notification } from '../models/notification.model.js';
-import { apiCache } from "../utils/api-cache.js";
+import { apiCache } from "../utils/redis-cache.js";
 
 export const applyJob = async (req, res) => {
     try {

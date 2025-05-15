@@ -16,26 +16,13 @@ spec:
     metadata:
       labels:
         app: frontend
-      annotations:
-        kubectl.kubernetes.io/restartedAt: "2025-05-16T19:05:00+07:00"
     spec:
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: nginx-config
-            items:
-              - key: nginx
-                path: custom-nginx.conf
       containers:
         - name: frontend
-          image: gcr.io/empyrean-harbor-456906-s2/frontend:76e0cb38-b900-4bac-8bac-dab95066a7dd
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:b8d8b38a-1ca3-4b33-a705-f0aefed26377
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/custom.conf
-              subPath: custom-nginx.conf
           resources:
             requests:
               cpu: "100m"
@@ -47,29 +34,17 @@ spec:
             - name: PORT
               value: "3000"
             - name: VITE_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: VITE_API_URL
+              value: "http://jobmarket.fun/api/v1"
             - name: BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: BASE_URL
+              value: "http://jobmarket.fun"
             - name: NODE_ENV
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: NODE_ENV
+              value: "production"
             - name: VITE_FRONTEND_URL
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: VITE_FRONTEND_URL
+              value: "http://jobmarket.fun"
           readinessProbe:
             httpGet:
-              path: /health
+              path: /
               port: 3000
-              scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 5
+            
