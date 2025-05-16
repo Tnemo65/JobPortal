@@ -39,9 +39,9 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: DISABLE_SECURE_COOKIES
-              value: "true"
-            - name: SECURE_COOKIES
               value: "false"
+            - name: SECURE_COOKIES
+              value: "true"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -83,9 +83,9 @@ spec:
                   name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
             - name: BASE_URL
-              value: "http://jobmarket.fun"
+              value: "https://jobmarket.fun"
             - name: FRONTEND_URL
-              value: "http://jobmarket.fun"
+              value: "https://jobmarket.fun"
             - name: REDIS_URL
               value: "redis://10.174.181.3:6379"
             - name: USE_SHARDING

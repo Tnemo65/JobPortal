@@ -25,7 +25,17 @@ const app = express();
 
 // Enable trust proxy setting for Express to work with Kubernetes and cloud environments
 app.set('trust proxy', true);
-
+// Kiểm tra và chuyển hướng HTTPS cho Cloudflare Flexible SSL
+app.use((req, res, next) => {
+  // Kiểm tra nếu request đến từ HTTPS qua Cloudflare hoặc đang trong môi trường development
+  if (req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV !== 'production') {
+    next();
+  } else {
+    // Chuyển hướng đến HTTPS nếu đang dùng HTTP
+    console.log(`Redirecting from HTTP to HTTPS: ${req.hostname}${req.url}`);
+    res.redirect(`https://${req.hostname}${req.url}`);
+  }
+});
 // Force set NODE_ENV to production when running on GKE
 if (process.env.KUBERNETES_SERVICE_HOST) {
     console.log("Running in Kubernetes environment - forcing production mode");

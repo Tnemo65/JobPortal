@@ -5,7 +5,16 @@ metadata:
   namespace: default
   annotations:
     kubernetes.io/ingress.class: "nginx"
+    # Trong trường hợp Cloudflare Flexible SSL không cần bật buộc HTTPS ở đây
+    # vì Cloudflare sẽ kết nối qua HTTP
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Thêm các headers Cloudflare
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Forwarded-Proto: https";
+      more_set_headers "X-Forwarded-Ssl: on";
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
   rules:
   - host: jobmarket.fun
