@@ -1,0 +1,13 @@
+# Commands to apply updated configuration
+kubectl apply -f jobportal-ingress.yaml
+
+# Check if ingress was created properly
+kubectl get ingress jobportal-ingress -o yaml
+
+# Get the external IP of your ingress controller (needed for DNS configuration)
+kubectl get svc -n ingress-nginx
+
+# Once you have the external IP, update your domain DNS A record to point to this IP
+# This is typically done through your domain registrar's website
+
+# After DNS propagation (which can take up to 24-48 hours), check that your site is accessible
