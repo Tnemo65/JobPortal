@@ -1,4 +1,10 @@
 {
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "frontend",
+    "namespace": "default"
+  },
   "spec": {
     "template": {
       "spec": {
@@ -9,7 +15,7 @@
               "name": "nginx-config",
               "items": [
                 {
-                  "key": "nginx",
+                  "key": "nginx.conf",
                   "path": "default.conf"
                 }
               ]
