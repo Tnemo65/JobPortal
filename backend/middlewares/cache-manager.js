@@ -1,4 +1,4 @@
-import { apiCache } from '../utils/redis-cache.js';
+import { apiCache } from '../utils/api-cache.js';
 
 /**
  * Middleware để xóa cache cho các nhóm cụ thể sau khi thực hiện thay đổi dữ liệu

@@ -21,13 +21,18 @@ import {
     BookmarkPlus,
     ChevronLeft,
     ExternalLink,
-    Loader2
+    Loader2,
+    HelpCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarImage } from './ui/avatar';
 import Navbar from './shared/Navbar';
 import { addSavedJob, removeSavedJob } from '@/redux/authSlice';
 import useGetAppliedJobs from '@/hooks/useGetAppliedJobs';
+import JobSummary from './JobSummary'; 
+import InterviewQuestionButton from './InterviewQuestionButton';
+import ImproveDescriptionPanel from './ImproveDescriptionPanel';
+import { Sparkles } from 'lucide-react';
 
 const JobDescription = () => {
     const {singleJob} = useSelector(store => store.job);
@@ -375,10 +380,22 @@ const JobDescription = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Main Job Info */}
                         <div className="lg:col-span-2">
+
+                            {/* Job Summary - THÊM PHẦN NÀY */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white p-6 rounded-xl shadow-md mb-8"
+                            >
+                                <JobSummary jobId={jobId} />
+                            </motion.div>
+            
+
                             {/* Description */}
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
                                 className="bg-white p-6 rounded-xl shadow-md mb-8"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -390,11 +407,29 @@ const JobDescription = () => {
                                 </div>
                             </motion.div>
                             
+                            {/* Thêm phần cải thiện mô tả nếu là admin hoặc chủ job */}
+{
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.15 }}
+    className="bg-white p-6 rounded-xl shadow-md mb-8"
+  >
+    <h2 className="text-xl font-bold mb-4 flex items-center">
+      <Sparkles className="mr-2 h-5 w-5 text-accent" />
+      Improve Job Description
+    </h2>
+    <ImproveDescriptionPanel 
+      jobId={jobId}
+      originalDescription={singleJob?.description}
+    />
+  </motion.div>
+}
                             {/* Requirements */}
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
+                                transition={{ delay: 0.2 }}
                                 className="bg-white p-6 rounded-xl shadow-md mb-8"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -421,6 +456,7 @@ const JobDescription = () => {
                                         ) : (
                                             <li className="text-gray-500">No specific requirements listed</li>
                                         )
+                                        
                                     }
                                 </ul>
                             </motion.div>
@@ -429,7 +465,7 @@ const JobDescription = () => {
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
+                                transition={{ delay: 0.3 }}
                                 className="bg-white p-6 rounded-xl shadow-md"
                             >
                                 <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -445,6 +481,28 @@ const JobDescription = () => {
                                     ))}
                                 </div>
                             </motion.div>
+
+
+                            {/* Interview Questions Button */}
+{/* Thêm phần Prepare For Interview cho tất cả người dùng */}
+<motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.16 }}
+    className="bg-white p-6 rounded-xl shadow-md mb-8"
+>
+    <h2 className="text-xl font-bold mb-4 flex items-center">
+        <HelpCircle className="mr-2 h-5 w-5 text-accent" />
+        Prepare For Interview
+    </h2>
+    <p className="text-gray-600 mb-4">
+        Practice with AI-generated interview questions specific to this role to increase your chances of success.
+    </p>
+    <InterviewQuestionButton 
+        jobId={jobId}
+        jobTitle={singleJob?.title}
+    />
+</motion.div>
                         </div>
                         
                         {/* Right Column - Company Info & Stats */}

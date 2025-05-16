@@ -72,6 +72,7 @@ steps:
     waitFor: ['tag-images']
 
     # Git operations with correct secret syntax
+    
     # Git operations with correct secret syntax
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'

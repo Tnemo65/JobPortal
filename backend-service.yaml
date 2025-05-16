@@ -4,9 +4,10 @@ metadata:
   name: backend
   namespace: default
 spec:
-  type: LoadBalancer
-  ports:
-    - port: 80
-      targetPort: 8080
   selector:
     app: backend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer

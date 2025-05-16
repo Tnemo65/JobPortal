@@ -19,14 +19,10 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: gcr.io/empyrean-harbor-456906-s2/frontend:35898faa-076b-4375-af02-9f95f86ff440
+          image: gcr.io/empyrean-harbor-456906-s2/frontend:5feb3dd3-960d-421a-bf4f-97340113b931
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: nginx.conf
           resources:
             requests:
               cpu: "100m"
@@ -38,21 +34,17 @@ spec:
             - name: PORT
               value: "3000"
             - name: VITE_API_URL
-              value: "https://jobmarket.fun/api/v1"
+              value: "http://jobmarket.fun/api/v1"
             - name: BASE_URL
-              value: "https://jobmarket.fun"
+              value: "http://jobmarket.fun"
             - name: NODE_ENV
               value: "production"
             - name: VITE_FRONTEND_URL
-              value: "https://jobmarket.fun"
+              value: "http://jobmarket.fun"
           readinessProbe:
             httpGet:
               path: /
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 5
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: nginx-config
             

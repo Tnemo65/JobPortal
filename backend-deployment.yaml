@@ -8,7 +8,7 @@ metadata:
     argocd-image-updater.argoproj.io/write-back-method: git
     argocd-image-updater.argoproj.io/backend.update-strategy: latest
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: backend
@@ -17,12 +17,20 @@ spec:
       labels:
         app: backend
     spec:
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:35898faa-076b-4375-af02-9f95f86ff440
+          image: gcr.io/empyrean-harbor-456906-s2/backend:5feb3dd3-960d-421a-bf4f-97340113b931
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              mountPath: D:\GitHub\JobPortal\frontend\nginx.conf
+              subPath: nginx.conf
           resources:
             requests:
               cpu: "100m"
@@ -39,9 +47,9 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: DISABLE_SECURE_COOKIES
-              value: "false"
-            - name: SECURE_COOKIES
               value: "true"
+            - name: SECURE_COOKIES
+              value: "false"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -83,26 +91,28 @@ spec:
                   name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
             - name: BASE_URL
-              value: "https://jobmarket.fun"
+              value: "http://jobmarket.fun"
             - name: FRONTEND_URL
-              value: "https://jobmarket.fun"
-            - name: REDIS_URL
-              value: "redis://10.174.181.3:6379"
+              value: "http://jobmarket.fun"
             - name: USE_SHARDING
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: USE_SHARDING
-            - name: USE_REDIS_CACHE
+            - name: OAUTH_CALLBACK_URL
+              value: "http://jobmarket.fun/api/v1/user/auth/google/callback"
+            - name: COOKIE_DOMAIN
+              value: "jobmarket.fun"
+            - name: REFRESH_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: USE_REDIS_CACHE
-            - name: USE_REDIS_SESSIONS
+                  key: SECRET_KEY
+            - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: USE_REDIS_SESSIONS
+                  key: OPENAI_API_KEY
           readinessProbe:
             httpGet:
               path: /health
@@ -115,4 +125,3 @@ spec:
               port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
-            

@@ -1,7 +1,5 @@
 # JobPortal - Nền tảng tìm việc làm trực tuyến với CI/CD DevOps
 
-![Job Portal Banner](https://via.placeholder.com/1200x300/48A6A7/FFFFFF?text=JobPortal)
-
 ## 📚 Giới thiệu
 
 JobPortal là nền tảng tìm việc làm toàn diện được phát triển bằng MERN Stack (MongoDB, Express, React, Node.js), giúp kết nối ứng viên tìm việc và nhà tuyển dụng một cách hiệu quả. Nền tảng này được triển khai theo mô hình DevOps hiện đại với quy trình CI/CD tự động hóa hoàn toàn trên Google Cloud Platform.
@@ -44,13 +42,12 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 - **Bcrypt**: Mã hóa mật khẩu
 - **Multer**: Xử lý upload file
 - **Cloudinary**: Lưu trữ hình ảnh và file
-- **Redis**: Cache và quản lý phiên làm việc
 - **Passport.js**: Xác thực với các dịch vụ của bên thứ ba
 - **Express Rate Limit**: Giới hạn request để ngăn chặn tấn công
 
 ### DevOps & Cloud Infrastructure
 - **Docker**: Container hóa ứng dụng để đảm bảo nhất quán giữa các môi trường
-- **GitHub/GitLab**: Quản lý mã nguồn, version control và trigger CI/CD
+- **GitHub**: Quản lý mã nguồn, version control và trigger CI/CD
 - **Google Cloud Build**: Dịch vụ CI/CD tự động build Docker images
 - **Artifact Registry**: Kho lưu trữ Docker images bảo mật và quản lý version
 - **Google Kubernetes Engine (GKE)**: Quản lý, triển khai và mở rộng container
@@ -58,7 +55,6 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 - **Cloud Load Balancing**: Phân phối lưu lượng truy cập ứng dụng
 - **Domain Name (jobmarket.fun)**: Cung cấp địa chỉ dễ nhớ cho người dùng
 - **Horizontal Pod Autoscaler**: Tự động scale pods dựa vào tải hệ thống
-- **Network Policies**: Bảo mật mạng giữa các services trong Kubernetes
 - **Ingress Controller**: Quản lý truy cập vào các services từ bên ngoài cluster
 
 ## 🚢 DevOps Workflow & Triển khai
@@ -71,46 +67,7 @@ JobPortal là nền tảng tìm việc làm toàn diện được phát triển 
 
 ### Hướng dẫn triển khai chi tiết
 
-#### Bước 0: Kiểm tra công nghệ hiện tại
-
-Trước khi bắt đầu, hãy kiểm tra những công nghệ đã được áp dụng:
-
-```bash
-# Kiểm tra Google Cloud project ID
-gcloud config list project
-
-# Kiểm tra cấu hình Cloud Build
-ls -la cloudbuild.yaml
-
-# Kiểm tra cluster GKE
-gcloud container clusters list
-
-# Kiểm tra ArgoCD
-kubectl get pods -n argocd
-
-# Kiểm tra Artifact Registry
-gcloud artifacts repositories list
-```
-
-#### Bước 1: Thiết lập GitHub/GitLab Repository
-
-1. **Tạo repository** (nếu chưa có):
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/your-username/JobPortal.git
-git push -u origin main
-```
-
-2. **Thiết lập webhook** để trigger Cloud Build khi có push:
-
-```bash
-# Lấy webhook URL từ Cloud Build
-gcloud builds triggers list
-```
+#### Bước 1: Thiết lập GitHub Repository
 
 #### Bước 2: Cấu hình Cloud Build
 
@@ -404,7 +361,6 @@ type: Opaque
 data:
   MONGODB_URI: <base64-encoded-mongodb-uri>
   JWT_SECRET: <base64-encoded-jwt-secret>
-  REDIS_URL: <base64-encoded-redis-url>
   CLOUD_NAME: <base64-encoded-cloud-name>
   CLOUD_API_KEY: <base64-encoded-api-key>
   CLOUD_API_SECRET: <base64-encoded-api-secret>
@@ -504,40 +460,6 @@ kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
 - Username: `admin`
 - Password: `prom-operator`
 
-#### Bước 8: Test CI/CD Pipeline
-
-1. **Thay đổi mã nguồn**:
-
-```bash
-# Thực hiện một thay đổi nhỏ
-echo '// Thay đổi mới' >> frontend/src/App.jsx
-
-# Commit và push
-git add frontend/src/App.jsx
-git commit -m "Test CI/CD pipeline"
-git push origin main
-```
-
-2. **Theo dõi quá trình build**:
-
-```bash
-# Xem Cloud Build logs
-gcloud builds list
-
-# Theo dõi trạng thái ArgoCD
-argocd app get jobportal
-```
-
-3. **Kiểm tra triển khai**:
-
-```bash
-# Kiểm tra pods
-kubectl get pods
-
-# Kiểm tra ứng dụng sẵn sàng
-kubectl get deployments
-```
-
 ## 🔗 Kết nối các thành phần chính
 
 ### Quy trình triển khai ứng dụng
@@ -553,10 +475,10 @@ kubectl get deployments
 - Dịch vụ này thu thập các chỉ số (metrics) như CPU, bộ nhớ, lưu lượng truy cập, cũng như nhật ký (logs) và dấu vết (traces) để cung cấp cái nhìn chi tiết về ứng dụng.
 - Nếu có sự cố, đội ngũ vận hành có thể dựa vào thông tin từ Google Cloud Monitoring để phát hiện và xử lý kịp thời.
 
-### Redis hỗ trợ cache hoặc quản lý session
-- Redis được sử dụng như một cơ sở dữ liệu lưu trữ trong bộ nhớ để tăng tốc độ xử lý.
+### Memory Cache hỗ trợ tăng tốc ứng dụng
+- Sử dụng memory cache để tăng tốc độ xử lý API đồng thời giảm tải cho database.
   - **Cache dữ liệu**: Lưu trữ tạm thời các kết quả truy vấn hoặc dữ liệu thường xuyên sử dụng, giảm tải cho cơ sở dữ liệu chính.
-  - **Quản lý session**: Lưu thông tin phiên người dùng (session data) để đảm bảo trải nghiệm liền mạch, đặc biệt trong các ứng dụng có nhiều người dùng đồng thời.
+  - **Quản lý session**: Lưu thông tin phiên người dùng (session data) trong memory để đảm bảo trải nghiệm liền mạch.
 - Việc này giúp ứng dụng phản hồi nhanh hơn và cải thiện hiệu suất tổng thể.
 
 ### Cloudinary xử lý media
@@ -577,20 +499,21 @@ kubectl get deployments
 - Để bảo mật ứng dụng, JWT (JSON Web Tokens) được triển khai nhằm:
   - **Xác thực**: Xác minh danh tính người dùng bằng cách tạo token khi đăng nhập, chứa thông tin như ID người dùng và thời hạn hiệu lực.
   - **Phân quyền**: Kiểm soát quyền truy cập vào các tài nguyên dựa trên vai trò hoặc quyền hạn được mã hóa trong token.
-- JWT hoạt động hiệu quả khi kết hợp với Redis (lưu trữ token để kiểm tra nhanh) và đảm bảo chỉ người dùng hợp lệ mới sử dụng được ứng dụng.
+- JWT được lưu trữ hoàn toàn trong HTTP-only cookies để đảm bảo an toàn tối đa, ngăn chặn các cuộc tấn công XSS.
+- Hệ thống sử dụng cơ chế refresh token để duy trì phiên người dùng mà không yêu cầu đăng nhập lại thường xuyên.
 
 ### Tóm tắt cách các thành phần kết nối
 - **Google Cloud Monitoring**: Giám sát toàn bộ ứng dụng sau khi triển khai trên GKE, cung cấp dữ liệu để tối ưu hóa và xử lý sự cố.
-- **Redis**: Tăng tốc ứng dụng bằng cách cache dữ liệu hoặc quản lý session, hỗ trợ backend hoạt động hiệu quả.
+- **Memory Cache**: Tăng tốc ứng dụng bằng cách cache dữ liệu và quản lý session trong bộ nhớ, hỗ trợ backend hoạt động hiệu quả.
 - **Cloudinary**: Xử lý và phân phối media, giảm tải cho hệ thống chính và tối ưu trải nghiệm người dùng.
 - **Redux**: Quản lý trạng thái frontend, đảm bảo giao diện hoạt động mượt mà và nhất quán.
-- **JWT**: Bảo mật ứng dụng thông qua xác thực và phân quyền, kết hợp với Redis để kiểm tra token nhanh chóng.
+- **JWT**: Bảo mật ứng dụng thông qua xác thực và phân quyền, được lưu trữ an toàn trong HTTP-only cookies.
 
 ## 📋 Yêu cầu hệ thống
 
 - Node.js phiên bản 18 trở lên
 - MongoDB 5.0 trở lên
-- Redis 6.0 trở lên (cho cache và quản lý phiên)
+- Apicache (cho memory cache API)
 - Tài khoản Google Cloud với các APIs được bật:
   - Container Registry
   - Kubernetes Engine
@@ -601,7 +524,7 @@ kubectl get deployments
 ## 🔒 Bảo mật
 
 Dự án áp dụng nhiều biện pháp bảo mật:
-- JWT cho xác thực người dùng
+- JWT cho xác thực người dùng (chỉ lưu trong HTTP-only cookies)
 - Bcrypt cho mã hóa mật khẩu
 - Sanitization cho dữ liệu đầu vào
 - Rate limiting để ngăn chặn tấn công brute force
@@ -611,12 +534,3 @@ Dự án áp dụng nhiều biện pháp bảo mật:
 - Secrets quản lý bằng Kubernetes Secrets
 - HTTPS với TLS termination tại Load Balancer
 
-## 📧 Liên hệ
-
-Nếu có bất kỳ câu hỏi hoặc đề xuất nào về quy trình DevOps, vui lòng liên hệ:
-
-Email: your-email@example.com
-
----
-
-&copy; 2025 JobPortal. Developed with ❤️ by Your Team.

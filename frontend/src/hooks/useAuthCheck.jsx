@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { USER_API_END_POINT } from "@/utils/constant";
 import { setUser } from "@/redux/authSlice";
-import axios from 'axios';
-import api from '@/utils/api';
+import { get } from '@/utils/api';
 
 /**
  * Hook kiểm tra trạng thái đăng nhập khi tải trang
@@ -13,53 +12,61 @@ const useAuthCheck = () => {
     const [checkingAuth, setCheckingAuth] = useState(true);
     const { user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
+    const authCheckAttempted = useRef(false);
 
     useEffect(() => {
-        const clearSession = async () => {
-            // We don't need to manually clear any localStorage tokens anymore
-            // The backend will handle clearing HTTP-only cookies
-            dispatch(setUser(null));
-        };
-
+        // Biến để theo dõi nếu component đã unmount
+        let isMounted = true;
+        
+        // Hàm xử lý việc xác thực người dùng
         const verifyAuth = async () => {
+            // Avoid calling API multiple times on component re-render
+            if (authCheckAttempted.current) return;
+            authCheckAttempted.current = true;
+            
             try {
-                // First, try to refresh the token if needed
-                await axios.post(`/api/v1/user/refresh-token`, {}, {
-                    withCredentials: true
-                }).catch(() => {
-                    // Ignore errors - just trying to refresh if possible
-                });
+                console.log("Verifying authentication status...");
                 
-                // Only check auth if we don't already have a user in Redux store
-                if (!user) {
-                    try {
-                        // Call the API to verify auth status using HTTP-only cookies
-                        const res = await api.get(`/user/sso/profile`, {
-                            withCredentials: true,
-                            headers: {
-                                'Cache-Control': 'no-cache',
-                                'Pragma': 'no-cache'
-                            }
-                        });
-                        
-                        if (res.data.success) {
-                            // Update user info in Redux store
-                            dispatch(setUser(res.data.user));
-                        }
-                    } catch (error) {
-                        console.log("No active session found");
-                        // No action needed - user remains null
+                // Add a small delay to ensure component is fully mounted
+                await new Promise(resolve => setTimeout(resolve, 50));
+                  try {
+                    // Check auth status using HTTP-only cookies
+                    const res = await get(`${USER_API_END_POINT}/sso/profile`, {
+                        withCredentials: true, // Critical for HTTP-only cookies
+                        bypassCache: true, // Ensure no caching
+                        critical: true // Mark as critical request
+                    });
+                    
+                    // Update if component is still mounted and request succeeded
+                    if (isMounted && res.data.success) {
+                        console.log("User session verified:", res.data.user.email);
+                        // Store only user data, no token
+                        dispatch(setUser(res.data.user));
                     }
+                } catch (error) {
+                    // Handle missing/invalid token
+                    console.log("No active session found or session invalid");
+                    if (error.response) {
+                        console.log("Auth status error:", error.response.data?.message || "Unknown error");
+                    }
+                    // User remains null in Redux store
                 }
             } catch (error) {
-                console.error("Auth verification error:", error);
+                console.error("Auth verification error:", error.message);
             } finally {
-                setCheckingAuth(false);
+                if (isMounted) {
+                    setCheckingAuth(false);
+                }
             }
         };
 
         verifyAuth();
-    }, []);
+
+        // Cleanup function to prevent memory leaks
+        return () => {
+            isMounted = false;
+        };
+    }, [dispatch]);
 
     return { checkingAuth };
 };
