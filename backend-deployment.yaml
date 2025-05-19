@@ -27,17 +27,10 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
-            
-
-            
           volumeMounts:
             - name: nginx-config
               mountPath: D:\GitHub\JobPortal\frontend\nginx.conf
               subPath: nginx.conf
-
-
-
-
           resources:
             requests:
               cpu: "100m"
