@@ -84,7 +84,6 @@ export const apiCache = {
             }
         }
         
-        // Cũng xóa cache của apicache
         apicacheInstance.clear(prefix);
         console.log(`Cleared ${count} cache entries with prefix: ${prefix}`);
         return true;
