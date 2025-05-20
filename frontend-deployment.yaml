@@ -3,10 +3,6 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: default
-  annotations:
-    argocd-image-updater.argoproj.io/image-list: frontend=gcr.io/empyrean-harbor-456906-s2/frontend
-    argocd-image-updater.argoproj.io/write-back-method: git
-    argocd-image-updater.argoproj.io/frontend.update-strategy: latest
 spec:
   replicas: 3
   selector:
