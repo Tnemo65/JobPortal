@@ -10,6 +10,14 @@ const openai = new OpenAI({
 // Tóm tắt một công việc cụ thể
 export const summarizeJob = async (req, res) => {
   try {
+    // Kiểm tra nếu tính năng AI đã bị vô hiệu hóa
+    if (!req.app.locals.aiEnabled) {
+      return res.status(503).json({
+        success: false,
+        message: "Tính năng AI đang tạm thời không khả dụng. Vui lòng thử lại sau."
+      });
+    }
+    
     const { id } = req.params;
     
     // Kiểm tra cache trước
@@ -104,9 +112,23 @@ const prompt = `
     
   } catch (error) {
     console.error("AI summarize job error:", error);
+    
+    let errorMessage = "Không thể tóm tắt thông tin công việc. Vui lòng thử lại sau.";
+    
+    if (error.status === 401) {
+      // Lỗi xác thực API
+      errorMessage = "Lỗi xác thực API. Vui lòng liên hệ quản trị viên.";
+      // Vô hiệu hóa AI tạm thời
+      if (req.app && req.app.locals) {
+        req.app.locals.aiEnabled = false;
+      }
+    } else if (error.status === 429) {
+      errorMessage = "Đã vượt quá giới hạn sử dụng API. Vui lòng thử lại sau ít phút.";
+    }
+    
     return res.status(500).json({
       success: false,
-      message: "Không thể tóm tắt thông tin công việc. Vui lòng thử lại sau."
+      message: errorMessage
     });
   }
 };
@@ -114,6 +136,12 @@ const prompt = `
 // Tự động tạo tóm tắt khi công việc được tạo
 export const generateJobSummary = async (jobId) => {
   try {
+    // Kiểm tra nếu AI không khả dụng, trả về null
+    if (!global.app || !global.app.locals || !global.app.locals.aiEnabled) {
+      console.log("Tính năng AI đang bị vô hiệu hóa - bỏ qua tạo tóm tắt tự động");
+      return null;
+    }
+    
     const job = await Job.findById(jobId).populate({
       path: "company",
       select: "name industry location"
@@ -197,6 +225,14 @@ const prompt = `
  */
 export const generateInterviewQuestions = async (req, res) => {
   try {
+    // Kiểm tra nếu tính năng AI đã bị vô hiệu hóa
+    if (!req.app.locals.aiEnabled) {
+      return res.status(503).json({
+        success: false,
+        message: "Tính năng AI đang tạm thời không khả dụng. Vui lòng thử lại sau."
+      });
+    }
+    
     const { jobId } = req.params;
         console.log("Generating interview questions for job:", jobId);
 
@@ -312,9 +348,23 @@ const prompt = `
     
   } catch (error) {
     console.error("AI generate interview questions error:", error);
+    
+    let errorMessage = "Không thể tạo câu hỏi phỏng vấn. Vui lòng thử lại sau.";
+    
+    if (error.status === 401) {
+      // Lỗi xác thực API
+      errorMessage = "Lỗi xác thực API. Vui lòng liên hệ quản trị viên.";
+      // Vô hiệu hóa AI tạm thời
+      if (req.app && req.app.locals) {
+        req.app.locals.aiEnabled = false;
+      }
+    } else if (error.status === 429) {
+      errorMessage = "Đã vượt quá giới hạn sử dụng API. Vui lòng thử lại sau ít phút.";
+    }
+    
     return res.status(500).json({
       success: false,
-      message: "Không thể tạo câu hỏi phỏng vấn. Vui lòng thử lại sau.",
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -326,6 +376,14 @@ const prompt = `
  */
 export const improveJobDescription = async (req, res) => {
   try {
+    // Kiểm tra nếu tính năng AI đã bị vô hiệu hóa
+    if (!req.app.locals.aiEnabled) {
+      return res.status(503).json({
+        success: false,
+        message: "Tính năng AI đang tạm thời không khả dụng. Vui lòng thử lại sau."
+      });
+    }
+    
     const { jobId } = req.params;
     
     if (!jobId) {
@@ -423,9 +481,23 @@ export const improveJobDescription = async (req, res) => {
     
   } catch (error) {
     console.error("AI improve description error:", error);
+    
+    let errorMessage = "Không thể cải thiện mô tả công việc. Vui lòng thử lại sau.";
+    
+    if (error.status === 401) {
+      // Lỗi xác thực API
+      errorMessage = "Lỗi xác thực API. Vui lòng liên hệ quản trị viên.";
+      // Vô hiệu hóa AI tạm thời
+      if (req.app && req.app.locals) {
+        req.app.locals.aiEnabled = false;
+      }
+    } else if (error.status === 429) {
+      errorMessage = "Đã vượt quá giới hạn sử dụng API. Vui lòng thử lại sau ít phút.";
+    }
+    
     return res.status(500).json({
       success: false,
-      message: "Không thể cải thiện mô tả công việc. Vui lòng thử lại sau.",
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
