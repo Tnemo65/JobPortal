@@ -39,7 +39,7 @@ const oauthDebugMiddleware = (req, res, next) => {
 
 // Test route for OAuth configuration
 router.route("/auth/test").get((req, res) => {
-    const callbackUrl = process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback';
+    const callbackUrl = 'https://jobmarket.fun/api/v1/user/auth/google/callback';
     const frontendUrl = process.env.FRONTEND_URL || 'https://jobmarket.fun';
     const googleClientId = process.env.GOOGLE_CLIENT_ID ? "Configured" : "Not configured";
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ? "Configured" : "Not configured";
@@ -181,7 +181,7 @@ router.route("/auth/status").get((req, res) => {
     return res.status(200).json({
         message: "SSO status check",
         configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-        callbackUrl: process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback',
+        callbackUrl: 'https://jobmarket.fun/api/v1/user/auth/google/callback',
         frontendUrl: process.env.FRONTEND_URL || 'https://jobmarket.fun',
         ssoEnabled: true,
         protocol: req.protocol,

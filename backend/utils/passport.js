@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 dotenv.config();
 
 // Xác định callback URL đầy đủ để khớp với authorized redirect URIs trong Google Cloud Console
-const callbackURL = process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback';
+const callbackURL = 'https://jobmarket.fun/api/v1/user/auth/google/callback';
 
 console.log('Using Google OAuth callback URL:', callbackURL);
 

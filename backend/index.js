@@ -138,7 +138,7 @@ const corsOptions = {
     app.get('/api/v1/auth-test', (req, res) => {
         res.status(200).json({
             message: 'Auth routes are working correctly',
-            callbackUrl: process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback',
+            callbackUrl: 'https://jobmarket.fun/api/v1/user/auth/google/callback',
             timestamp: new Date().toISOString()
         });
     });
