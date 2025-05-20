@@ -15,23 +15,12 @@ spec:
       annotations:
         kubectl.kubernetes.io/restartedAt: "2025-05-16T19:05:00+07:00"
     spec:
-      volumes:
-        - name: nginx-config
-          configMap:
-            name: nginx-config
-            items:
-              - key: nginx
-                path: custom-nginx.conf
       containers:
         - name: frontend
           image: gcr.io/empyrean-harbor-456906-s2/frontend:e3922f4a-938b-4229-8f3a-6915aeda1401
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d/custom.conf
-              subPath: custom-nginx.conf
           resources:
             requests:
               cpu: "100m"
