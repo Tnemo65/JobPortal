@@ -22,7 +22,8 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    'X-Forwarded-Proto': 'https' // Ensure proxy knows we're using HTTPS
   }
 });
 

@@ -15,8 +15,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
     res.cookie("access_token", accessToken, { 
         maxAge: 60 * 60 * 1000, // 1 hour
         httpOnly: true, 
-        secure: true, // Set to true for HTTPS
-        sameSite: 'strict', // Best setting for HTTPS
+        secure: true, // Đã chuyển sang HTTPS
+        sameSite: 'lax', // 'lax' cho SSO Cross-site
         path: '/',
         domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
     });
@@ -26,8 +26,8 @@ const setAuthCookies = (res, accessToken, refreshToken = null) => {
         res.cookie("refresh_token", refreshToken, { 
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             httpOnly: true, 
-            secure: true, // Set to true for HTTPS
-            sameSite: 'strict', // Best setting for HTTPS
+            secure: true, // Đã chuyển sang HTTPS
+            sameSite: 'lax', // 'lax' cho SSO Cross-site
             path: '/',
             domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
         });
@@ -335,7 +335,7 @@ export const ssoAuthSuccess = async (req, res) => {
         // Set cookies only - thêm domain nếu cần
         const cookieOptions = {
             httpOnly: true, 
-            secure: false, // Must be false for HTTP
+            secure: true, // Đã chuyển sang HTTPS nên phải là true
             sameSite: 'lax', // Tốt nhất cho SSO cross-site
             path: '/'
         };

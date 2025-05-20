@@ -51,7 +51,11 @@ router.route("/auth/test").get((req, res) => {
         googleClientId,
         googleClientSecret,
         environment: process.env.NODE_ENV || 'production',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        protocol: req.protocol,
+        secure: req.secure,
+        httpsEnabled: true, // Đã chuyển sang HTTPS
+        forwardedProto: req.headers['x-forwarded-proto'] || 'none'
     });
 });
 
@@ -73,8 +77,9 @@ router.route("/auth/google").get(
                 res.cookie("oauth_state", state, { 
                     maxAge: 10 * 60 * 1000, // 10 minutes
                     httpOnly: true, 
-                    secure: false, // Must be false for HTTP
-                    sameSite: 'lax'
+                    secure: true, // HTTPS enabled
+                    sameSite: 'lax',
+                    domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun'
                 });
                 console.log("Saved OAuth state to cookie:", state);
             }
@@ -170,6 +175,21 @@ router.route("/auth/google/callback").get(
 
 router.route("/auth/failure").get(ssoAuthFailure);
 router.route("/sso/profile").get(isAuthenticated, getSsoProfile);
+
+// Thêm route mới để kiểm tra trạng thái SSO
+router.route("/auth/status").get((req, res) => {
+    return res.status(200).json({
+        message: "SSO status check",
+        configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+        callbackUrl: process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback',
+        frontendUrl: process.env.FRONTEND_URL || 'https://jobmarket.fun',
+        ssoEnabled: true,
+        protocol: req.protocol,
+        secure: req.secure,
+        httpsEnabled: true,
+        timestamp: new Date().toISOString()
+    });
+});
 
 // Notification routes
 router.route("/notifications").get(isAuthenticated, getNotifications);

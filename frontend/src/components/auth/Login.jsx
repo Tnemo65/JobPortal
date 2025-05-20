@@ -77,18 +77,15 @@ const Login = () => {
         }
     };
 
+    // Hàm xử lý đăng nhập qua Google
     const handleGoogleLogin = () => {
         try {
             toast.info("Đang chuyển hướng đến đăng nhập Google...");
-            console.log("Redirecting to Google OAuth:", `${USER_API_END_POINT}/auth/google`);
             const redirectUrl = `${USER_API_END_POINT}/auth/google`;
-            
-            // Add a brief delay for the toast to show
-            setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, 500);
+            console.log("Redirecting to Google OAuth:", redirectUrl);
+            window.location.href = redirectUrl;
         } catch (error) {
-            console.error("Google login redirect error:", error);
+            console.error("Error during Google redirection:", error);
             toast.error("Không thể kết nối đến dịch vụ đăng nhập Google");
         }
     }
@@ -118,14 +115,16 @@ const Login = () => {
                             
                             <form onSubmit={submitHandler}>
                                 <div className="mb-6">
-                                    <Button 
-                                        type="button"
-                                        onClick={handleGoogleLogin}
-                                        className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg p-2.5 transition-all duration-200 hover:shadow-md"
-                                    >
-                                        <FaGoogle className="text-red-500 h-5 w-5" />
-                                        <span>Sign in with Google</span>
-                                    </Button>
+                                    <div className="w-full grid grid-cols-1 gap-2">
+                                        <Button 
+                                            type="button"
+                                            onClick={handleGoogleLogin}
+                                            className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg p-2.5 transition-all duration-200 hover:shadow-md"
+                                        >
+                                            <FaGoogle className="text-red-500 h-5 w-5" />
+                                            <span>Sign in with Google</span>
+                                        </Button>
+                                    </div>
                                 </div>
                                 
                                 <div className="relative my-6">

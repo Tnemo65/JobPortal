@@ -5,40 +5,37 @@ metadata:
   namespace: default
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    # Remove the rewrite-target annotation that's causing the problem
-    # nginx.ingress.kubernetes.io/rewrite-target: /
-    # Add these annotations for better behavior
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    # Add CORS support
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod # Bổ sung nếu dùng cert-manager để tự xin cert
 spec:
-  ingressClassName: nginx  # Thêm dòng này
+  ingressClassName: nginx
   tls:
-  - hosts:
-    - jobmarket.fun
-    secretName: jobmarket-tls  # Tên của secret chứa SSL certificate
+    - hosts:
+        - jobmarket.fun
+      secretName: jobmarket-tls  # Cert sẽ được lấy từ đây (do bạn tạo hoặc cert-manager tạo)
   rules:
-  - host: jobmarket.fun
-    http:
-      paths:
-        - path: /api
-          pathType: Prefix
-          backend:
-            service:
-              name: backend
-              port:
-                number: 80
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: frontend
-              port:
-                number: 80
+    - host: jobmarket.fun
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

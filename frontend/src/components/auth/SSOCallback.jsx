@@ -53,7 +53,8 @@ const SSOCallback = () => {
                         signal: controller.signal,
                         headers: {
                             'Cache-Control': 'no-cache',
-                            'Pragma': 'no-cache'
+                            'Pragma': 'no-cache',
+                            'X-Forwarded-Proto': 'https' // Ensure proxy knows we're using HTTPS
                         }
                     });
                     

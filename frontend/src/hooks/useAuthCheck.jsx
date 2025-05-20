@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { USER_API_END_POINT } from "@/utils/constant";
 import { setUser } from "@/redux/authSlice";
-import { get } from '@/utils/api';
+import api from '@/utils/api';
+import axios from 'axios';
 
 /**
  * Hook kiểm tra trạng thái đăng nhập khi tải trang
@@ -27,14 +28,34 @@ const useAuthCheck = () => {
             try {
                 console.log("Verifying authentication status...");
                 
-                // Add a small delay to ensure component is fully mounted
-                await new Promise(resolve => setTimeout(resolve, 50));
-                  try {
+                // First, try to refresh token if needed
+                try {
+                    await axios.post(`${USER_API_END_POINT}/refresh-token`, {}, {
+                        withCredentials: true,
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    console.log("Token refresh successful");
+                } catch (refreshError) {
+                    // Ignore errors - just trying to refresh if possible
+                    console.log("Token refresh skipped:", refreshError?.message);
+                }
+                
+                // Add a small delay to ensure token refresh is processed
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                try {
                     // Check auth status using HTTP-only cookies
-                    const res = await get(`${USER_API_END_POINT}/sso/profile`, {
+                    console.log("Checking auth status using HTTPS cookies");
+                    const res = await api.get(`${USER_API_END_POINT}/sso/profile`, {
                         withCredentials: true, // Critical for HTTP-only cookies
-                        bypassCache: true, // Ensure no caching
-                        critical: true // Mark as critical request
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache',
+                            'X-Request-Protocol': 'https' // Signal HTTPS request
+                        }
                     });
                     
                     // Update if component is still mounted and request succeeded
@@ -48,6 +69,11 @@ const useAuthCheck = () => {
                     console.log("No active session found or session invalid");
                     if (error.response) {
                         console.log("Auth status error:", error.response.data?.message || "Unknown error");
+                        console.log("Status code:", error.response.status);
+                    } else if (error.request) {
+                        console.log("No response received:", error.request);
+                    } else {
+                        console.log("Error during request setup:", error.message);
                     }
                     // User remains null in Redux store
                 }
