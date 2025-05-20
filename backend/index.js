@@ -34,8 +34,8 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 // Initialize app and DB connection without session configuration first
 const initApp = async () => {
     console.log(`Starting server in ${process.env.NODE_ENV || 'production'} mode`);
-    console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://jobmarket.fun'}`);
-    console.log(`Backend URL: ${process.env.BASE_URL || 'http://34.81.121.101'}`);
+    console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'https://jobmarket.fun'}`);
+    console.log(`Backend URL: ${process.env.BASE_URL || 'https://34.81.121.101'}`);
 
     // Configure CORS first - before ANY other middleware
 const corsOptions = {
@@ -44,12 +44,10 @@ const corsOptions = {
         
         // Instead of allowing all origins, specify allowed domains
         const allowedOrigins = [
-            'http://jobmarket.fun',
             'https://jobmarket.fun',
-            'http://www.jobmarket.fun',
             'https://www.jobmarket.fun',
             // Include for local development if needed
-            'http://localhost:5173'
+            'https://localhost:5173'
         ];
         
         // Check if origin is in allowed list or undefined (for same-origin requests)
@@ -140,7 +138,7 @@ const corsOptions = {
     app.get('/api/v1/auth-test', (req, res) => {
         res.status(200).json({
             message: 'Auth routes are working correctly',
-            callbackUrl: process.env.OAUTH_CALLBACK_URL || 'http://jobmarket.fun/api/v1/user/auth/google/callback',
+            callbackUrl: process.env.OAUTH_CALLBACK_URL || 'https://jobmarket.fun/api/v1/user/auth/google/callback',
             timestamp: new Date().toISOString()
         });
     });
@@ -153,7 +151,7 @@ const corsOptions = {
         // More permissive rate limiting during development
         app.use((req, res, next) => {
             // Check if the request is from development environment
-            if (req.headers.origin === 'http://jobmarket.fun') {
+            if (req.headers.origin === 'https://jobmarket.fun') {
                 // Skip rate limiting for development requests
                 return next();
             }
@@ -168,9 +166,9 @@ const corsOptions = {
         resave: false,
         saveUninitialized: false,
         cookie: { 
-            secure: false, // Luôn sử dụng false cho HTTP
+            secure: true, // Sử dụng true cho HTTPS
             httpOnly: true, // Prevent client-side JS from reading the cookie
-            sameSite: 'lax', // Sử dụng lax để hoạt động tốt với HTTP
+            sameSite: 'strict', // Sử dụng strict để tăng bảo mật cho HTTPS
             maxAge: 24 * 60 * 60 * 1000, // 1 day
             domain: process.env.COOKIE_DOMAIN || 'jobmarket.fun',
             path: '/' // Ensure cookies are sent for all paths

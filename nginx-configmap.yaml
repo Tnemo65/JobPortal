@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx: |
+    # Các map directive phải ở http block (được include hợp lệ trong conf.d/)
+    map $http_cf_visitor $https_forwarded_cf {
+        default "";
+        ~*'"scheme":"https"' on;
+    }
+
+    map $http_x_forwarded_proto $https_forwarded_xfp {
+        default "";
+        https on;
+    }
+
+    map "$https_forwarded_cf$https_forwarded_xfp" $need_redirect {
+        default 1;
+        ~*on 0;
+    }
+    
+    map $http_user_agent $is_kube_probe {
+        default 0;
+        ~*kube-probe 1;
+    }
+
+    map "$need_redirect:$is_kube_probe" $do_redirect {
+        "1:0" 1;
+        default 0;
+    }
+
+    server {
+        listen 3000;
+        server_name _;
+
+        location = /health {
+            access_log off;
+            add_header Content-Type text/plain;
+            return 200 "healthy\n";
+        }
+
+        if ($do_redirect = 1) {
+            return 301 https://$host$request_uri;
+        }
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header X-Content-Type-Options "nosniff";
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self' https://jobmarket.fun wss://jobmarket.fun https://api.jobmarket.fun; frame-ancestors 'self';";
+
+        location / {
+            try_files $uri $uri/ /index.html;
+            expires 1d;
+            add_header Cache-Control "public, max-age=86400, must-revalidate";
+        }
+
+        location /api/ {
+            proxy_pass http://backend/api/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_read_timeout 90;
+        }
+
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+            expires 30d;
+            add_header Cache-Control "public, max-age=2592000";
+            try_files $uri =404;
+        }
+
+        error_page 404 =200 /index.html;
+        
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 10240;
+        gzip_proxied expired no-cache no-store private auth;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/x-javascript
+            application/javascript
+            application/xml
+            application/json
+            font/ttf
+            font/otf
+            font/woff
+            font/woff2;
+        gzip_disable "MSIE [1-6]\.";
+    }

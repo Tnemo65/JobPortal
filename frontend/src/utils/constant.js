@@ -1,8 +1,13 @@
 // Production vs Development API endpoints
-const API_BASE = import.meta.env.VITE_API_URL || 
+let API_BASE = import.meta.env.VITE_API_URL || 
   (import.meta.env.PROD 
-    ? "http://jobmarket.fun/api/v1"
-    : "http://localhost:8080/api/v1");
+    ? "https://jobmarket.fun/api/v1"
+    : "https://localhost:8080/api/v1");
+
+// Force HTTPS to prevent mixed content errors
+if (API_BASE.startsWith('http:')) {
+  API_BASE = API_BASE.replace('http:', 'https:');
+}
 
 // Expose this for other imports
 export { API_BASE };
@@ -14,7 +19,7 @@ export const COMPANY_API_END_POINT = `${API_BASE}/company`;
 
 // Frontend URL for redirects
 export const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 
-  (import.meta.env.PROD ? "http://jobmarket.fun" : "http://localhost:5173");
+  (import.meta.env.PROD ? "https://jobmarket.fun" : "https://localhost:5173");
 
 // Authentication endpoints
 export const GOOGLE_AUTH_URL = `${USER_API_END_POINT}/auth/google`;

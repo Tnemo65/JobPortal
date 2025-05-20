@@ -23,14 +23,14 @@ spec:
             name: nginx-config
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:fe5b896c-c6f3-44df-bdc7-b3c1b3d82f02
+          image: gcr.io/empyrean-harbor-456906-s2/backend:76e0cb38-b900-4bac-8bac-dab95066a7dd
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
           volumeMounts:
             - name: nginx-config
-              mountPath: D:\GitHub\JobPortal\frontend\nginx.conf
-              subPath: nginx.conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx
           resources:
             requests:
               cpu: "100m"
@@ -91,28 +91,65 @@ spec:
                   name: app-secrets
                   key: SECRET_ENCRYPTION_KEY
             - name: BASE_URL
-              value: "http://jobmarket.fun"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: BASE_URL
             - name: FRONTEND_URL
-              value: "http://jobmarket.fun"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: FRONTEND_URL
             - name: USE_SHARDING
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: USE_SHARDING
             - name: OAUTH_CALLBACK_URL
-              value: "http://jobmarket.fun/api/v1/user/auth/google/callback"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: OAUTH_CALLBACK_URL
             - name: COOKIE_DOMAIN
-              value: "jobmarket.fun"
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: COOKIE_DOMAIN
             - name: REFRESH_TOKEN_SECRET
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: SECRET_KEY
+                  key: REFRESH_TOKEN_SECRET
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: OPENAI_API_KEY
+            - name: RATE_LIMIT_WINDOW_MS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: RATE_LIMIT_WINDOW_MS
+            - name: RATE_LIMIT_MAX
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: RATE_LIMIT_MAX
+            - name: AUTH_RATE_LIMIT_WINDOW_MS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AUTH_RATE_LIMIT_WINDOW_MS
+            - name: AUTH_RATE_LIMIT_MAX
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AUTH_RATE_LIMIT_MAX
+            - name: CACHE_TTL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: CACHE_TTL
           readinessProbe:
             httpGet:
               path: /health

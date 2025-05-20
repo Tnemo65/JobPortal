@@ -8,7 +8,8 @@ metadata:
     # Remove the rewrite-target annotation that's causing the problem
     # nginx.ingress.kubernetes.io/rewrite-target: /
     # Add these annotations for better behavior
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
@@ -19,6 +20,10 @@ metadata:
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 spec:
   ingressClassName: nginx  # Thêm dòng này
+  tls:
+  - hosts:
+    - jobmarket.fun
+    secretName: jobmarket-tls  # Tên của secret chứa SSL certificate
   rules:
   - host: jobmarket.fun
     http:
