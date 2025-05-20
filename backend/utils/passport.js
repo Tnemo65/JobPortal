@@ -15,12 +15,17 @@ console.log('Using Google OAuth callback URL:', callbackURL);
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.error('GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET chưa được cấu hình trong .env');
     console.error('OAuth sẽ không hoạt động đúng nếu thiếu các biến này');
+} else {
+    // Hiển thị phần đầu của Client ID để xác nhận (không hiển thị toàn bộ vì lý do bảo mật)
+    const clientIdPrefix = process.env.GOOGLE_CLIENT_ID.substring(0, 10) + '...';
+    console.log('Google OAuth Client ID được cấu hình:', clientIdPrefix);
+    console.log('Google OAuth Client Secret được cấu hình: [HIDDEN]');
 }
 
 // Cấu hình Google OAuth strategy với xử lý lỗi và logs nâng cao
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    clientID: process.env.GOOGLE_CLIENT_ID || '1051764248688-kiv3ptllb1hcl61fpoouks8qro3ta8sl.apps.googleusercontent.com',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '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',
     callbackURL: callbackURL,
     scope: ['profile', 'email'],
     prompt: 'select_account', // Luôn hiển thị màn hình chọn tài khoản
