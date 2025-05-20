@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: gcr.io/empyrean-harbor-456906-s2/backend:3386a7c5-185b-4ad9-acd0-70b1711792ba
+          image: gcr.io/empyrean-harbor-456906-s2/backend:c8e369e4-0669-42bb-9b64-65a756b5332f
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
