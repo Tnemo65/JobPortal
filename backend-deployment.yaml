@@ -139,11 +139,12 @@ spec:
                   name: app-secrets
                   key: CACHE_TTL
           readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 5
+          httpGet:
+            path: /health
+            port: 8080 # hoặc port mà backend đang lắng nghe
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
